@@ -38,6 +38,9 @@ class ModulePermissions
     public static function allows(?User $user, string $module, string $action): bool
     {
         if (!$user) return false;
+        // Sistem hanya mengelola satu desa; profil Desa dapat dibaca oleh
+        // semua pengguna yang sudah login dan bukan data berbasis penugasan.
+        if ($module === 'desa' && $action === 'view') return true;
         if ($user->roles->contains(fn ($role): bool => in_array(
             strtolower(str_replace([' ', '-'], '_', $role->name)),
             ['super_admin', 'superadmin'],

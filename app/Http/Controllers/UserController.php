@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Role;
@@ -23,7 +24,7 @@ class UserController extends Controller
     {
         return Inertia::render('users/form', [
             'user' => null,
-            'roles' => Role::query()->orderBy('name')->get(['id', 'name']),
+            'roles' => Role::query()->whereNotIn('name', ['super_admin', 'superadmin', 'Super Admin'])->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -36,7 +37,7 @@ class UserController extends Controller
             'jenis_kelamin' => ['nullable', 'in:Laki-laki,Perempuan'],
             'avatar' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'role' => ['required', 'exists:roles,name'],
+            'role' => ['required', 'exists:roles,name', Rule::notIn(['super_admin', 'superadmin', 'Super Admin'])],
         ]);
 
         if ($request->hasFile('avatar')) {

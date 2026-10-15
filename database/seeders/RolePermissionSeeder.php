@@ -66,5 +66,6 @@ class RolePermissionSeeder extends Seeder
                 $role->syncPermissions($defaults[$roleName]->values()->all());
             }
         }
+
     }
 }

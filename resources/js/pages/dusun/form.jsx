@@ -20,12 +20,23 @@ export default function DusunForm({ dusun, desas = [] }) {
     const removeRt = (rwIndex, rtIndex) => updateRw(rwIndex, 'rts', data.rws[rwIndex].rts.filter((_, rowIndex) => rowIndex !== rtIndex));
     const submit = (event) => { event.preventDefault(); editing ? put(`/dusun/${dusun.id}`) : post('/dusun'); };
     const error = (field) => errors[field] && <p className="mt-1 text-xs text-red-600">{errors[field]}</p>;
+    const fieldLabel = (field) => {
+        if (field === 'nama') return 'Nama Dusun';
+        if (field === 'desa_id') return 'Desa';
+        const rt = field.match(/^rws\.(\d+)\.rts\.(\d+)\.nomor$/);
+        if (rt) return `Nomor RT ${Number(rt[2]) + 1} pada RW ${Number(rt[1]) + 1}`;
+        const rw = field.match(/^rws\.(\d+)\.nomor$/);
+        if (rw) return `Nomor RW ${Number(rw[1]) + 1}`;
+        return field;
+    };
+    const validationSummary = Object.entries(errors).flatMap(([field, messages]) => (Array.isArray(messages) ? messages : [messages]).filter(Boolean).map((message) => ({ field, message })));
 
     return <VillageDashboardLayout>
         <Head title={editing ? 'Edit Dusun' : 'Tambah Dusun'} />
         <section className="mx-auto max-w-5xl space-y-5">
             <div className="flex items-center gap-3"><Link href={editing ? `/dusun/${dusun.id}` : '/dusun'} className="rounded-md p-2 text-slate-500 hover:bg-white hover:text-cyan-600"><ArrowLeft className="size-5" /></Link><div><p className="text-sm font-medium text-cyan-600">Master Wilayah</p><h1 className="text-2xl font-bold text-slate-800">{editing ? 'Edit Dusun, RW & RT' : 'Tambah Dusun, RW & RT'}</h1></div></div>
             <form onSubmit={submit} className="space-y-6">
+                {validationSummary.length > 0 && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"><p className="font-semibold">Periksa field berikut:</p><ul className="mt-2 list-disc space-y-1 pl-5">{validationSummary.map(({ field, message }) => <li key={`${field}-${message}`}><span className="font-medium">{fieldLabel(field)}:</span> {message}</li>)}</ul></div>}
                 <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
                     <label className="block"><span className="mb-2 block text-sm font-medium text-slate-700">Nama Dusun <span className="text-red-600">*</span></span><input value={data.nama} onChange={(event) => setData('nama', event.target.value)} className={inputClass('nama')} />{error('nama')}</label>
                     <label className="mt-4 flex items-center gap-3"><input type="checkbox" checked={data.aktif} onChange={(event) => setData('aktif', event.target.checked)} className="size-4" /><span className="text-sm font-medium text-slate-700">Dusun aktif</span></label>

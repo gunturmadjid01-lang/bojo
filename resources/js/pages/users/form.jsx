@@ -7,7 +7,9 @@ import { useState } from 'react';
 export default function UserForm({ user, roles = [] }) {
     const editing = Boolean(user);
     const [showPassword, setShowPassword] = useState(false);
+    const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
     const [preview, setPreview] = useState(user?.avatar ? `/storage/${user.avatar}` : '');
+    const selectableRoles = roles.filter((role) => !['super_admin', 'superadmin'].includes(String(role.name).toLowerCase().replace(/[ -]+/g, '_')));
    const {
     data,
     setData,
@@ -24,7 +26,7 @@ export default function UserForm({ user, roles = [] }) {
     avatar: null,
     password: '',
     password_confirmation: '',
-    role: user?.roles?.[0]?.name || roles[0]?.name || '',
+    role: user?.roles?.[0]?.name || selectableRoles[0]?.name || '',
 });
 
     const inputClass = (
@@ -181,7 +183,7 @@ export default function UserForm({ user, roles = [] }) {
                                 <span>{requiredLabel('Role')}</span>
                                 <FormSelect
                                     value={data.role}
-                                    options={roles.map((role) => ({ value: role.name, label: role.name }))}
+                                    options={selectableRoles.map((role) => ({ value: role.name, label: role.name }))}
                                     onChange={(value) => setData('role', value)}
                                     placeholder="Pilih role"
                                     error={errors.role}
@@ -210,12 +212,22 @@ export default function UserForm({ user, roles = [] }) {
                             </label>
                             <label className="block">
                                 <span>{requiredLabel('Konfirmasi password')}</span>
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    value={data.password_confirmation}
-                                    onChange={(event) => setData('password_confirmation', event.target.value)}
-                                    className={inputClass('password_confirmation')}
-                                />
+                                <span className="relative block">
+                                    <input
+                                        type={showPasswordConfirmation ? 'text' : 'password'}
+                                        value={data.password_confirmation}
+                                        onChange={(event) => setData('password_confirmation', event.target.value)}
+                                        className={inputClass('password_confirmation', 'h-11 w-full rounded-md border px-3 pr-11 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100')}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPasswordConfirmation((value) => !value)}
+                                        className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400"
+                                        aria-label={showPasswordConfirmation ? 'Sembunyikan konfirmasi password' : 'Tampilkan konfirmasi password'}
+                                    >
+                                        {showPasswordConfirmation ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                                    </button>
+                                </span>
                                 {fieldError('password_confirmation')}
                             </label>
                         </div>

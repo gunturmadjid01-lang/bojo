@@ -20,6 +20,8 @@ const permissionVariants = {
     'jabatan-desa': ['jabatan desa', 'jabatan_desas', 'jabatan-desa'],
     users: ['users'],
     permissions: ['permissions'],
+    reports: ['reports', 'laporan', 'laporan & statistik'],
+    laporan: ['reports', 'laporan', 'laporan & statistik'],
     'penugasan-perangkat': ['penugasan perangkat', 'penugasan_perangkats', 'penugasan-perangkat'],
 };
 
@@ -113,6 +115,7 @@ export function canAccessHref(user, href, action = 'view') {
     if (!module || module === 'dashboard' || module === 'logout' || module === 'settings') {
         return true;
     }
+    if (module === 'desa' && action === 'view') return true;
 
     return hasPermission(user, module, action);
 }

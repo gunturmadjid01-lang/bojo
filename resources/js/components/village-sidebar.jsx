@@ -14,9 +14,10 @@ import {
     UsersRound,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { canAccessAnyActionHref, canAccessHref, hasPermissionName } from '@/lib/permissions';
+import { canAccessHref, hasPermissionName } from '@/lib/permissions';
 
 const masterMenuItems = [
+    { label: 'Data Desa', href: '/desa', icon: Settings },
     { label: 'Master Dusun', href: '/dusun', icon: MapPinned },
     { label: 'Master Pendidikan', href: '/pendidikan', icon: BookOpen },
     { label: 'Master Pekerjaan', href: '/pekerjaan', icon: BriefcaseBusiness },
@@ -52,12 +53,11 @@ export default function VillageSidebar({ open = true, onClose }) {
 
     const visibleMenu = useMemo(() => {
         return {
-            desa: canAccessAnyActionHref(user, '/desa'),
-            master: masterMenuItems.filter((item) => canAccessAnyActionHref(user, item.href)),
-            kependudukan: kependudukanMenuItems.filter((item) => canAccessAnyActionHref(user, item.href)),
-            system: systemSettingsMenuItems.filter((item) => canAccessAnyActionHref(user, item.href)),
-            perangkat: perangkatDesaMenuItems.filter((item) => canAccessAnyActionHref(user, item.href) || (item.permission && hasPermissionName(user, item.permission))),
-            reports: canAccessAnyActionHref(user, '/reports'),
+            master: masterMenuItems.filter((item) => canAccessHref(user, item.href, 'view')),
+            kependudukan: kependudukanMenuItems.filter((item) => canAccessHref(user, item.href, 'view')),
+            system: systemSettingsMenuItems.filter((item) => canAccessHref(user, item.href, 'view')),
+            perangkat: perangkatDesaMenuItems.filter((item) => canAccessHref(user, item.href, 'view') || (item.permission && hasPermissionName(user, item.permission))),
+            reports: canAccessHref(user, '/laporan', 'view'),
         };
     }, [user]);
 
@@ -67,7 +67,7 @@ export default function VillageSidebar({ open = true, onClose }) {
     const isPerangkatDesaRoute = visibleMenu.perangkat.some((item) => url === item.href || url.startsWith(item.href));
 
     const firstVisibleGroup = useMemo(() => {
-        const order = ['perangkat-desa', 'master-data', 'kependudukan', 'system-settings'];
+        const order = ['master-data', 'perangkat-desa', 'kependudukan', 'system-settings'];
         return order.find((groupId) => {
             const groupMap = {
                 'perangkat-desa': visibleMenu.perangkat,
@@ -129,45 +129,6 @@ export default function VillageSidebar({ open = true, onClose }) {
                             <span>Dashboard</span>
                         </Link>
 
-                        {visibleMenu.desa && (
-                            <Link
-                                href="/desa"
-                                onClick={onClose}
-                                className={`flex h-[44px] items-center gap-3 rounded-md px-3 text-sm transition-colors ${isActive('/desa') ? 'bg-[#08a8c8] text-white' : 'text-[#009ac1] hover:bg-cyan-50'}`}
-                            >
-                                <Settings className="size-4" aria-hidden="true" />
-                                <span>Setting Desa</span>
-                            </Link>
-                        )}
-                        {visibleMenu.reports && <Link href="/laporan" onClick={onClose} className={`flex h-[44px] items-center gap-3 rounded-md px-3 text-sm transition-colors ${isActive('/laporan') ? 'bg-[#08a8c8] text-white' : 'text-[#009ac1] hover:bg-cyan-50'}`}><Gauge className="size-4" aria-hidden="true" /><span>Laporan & Statistik</span></Link>}
-                        {visibleMenu.perangkat.length > 0 && <div className="overflow-hidden rounded-md border border-slate-200 bg-slate-50">
-                            <button
-                                type="button"
-                                onClick={() => toggleGroup('perangkat-desa')}
-                                className={`flex w-full items-center justify-between gap-3 px-3 py-3 text-left text-sm font-medium transition-colors ${isPerangkatDesaRoute ? 'bg-cyan-50 text-cyan-700' : 'text-[#009ac1] hover:bg-cyan-50'}`}
-                            >
-                                <span className="flex items-center gap-3">
-                                    <UserCog className="size-4" aria-hidden="true" />
-                                    <span>Perangkat Desa</span>
-                                </span>
-                                {openGroup === 'perangkat-desa' ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
-                            </button>
-                            {openGroup === 'perangkat-desa' && (
-                                <div className="border-t border-slate-200 bg-white">
-                                    {visibleMenu.perangkat.map(({ label, href, icon: Icon }) => (
-                                        <Link
-                                            key={href}
-                                            href={href}
-                                            onClick={onClose}
-                                            className={`flex h-[40px] items-center gap-3 px-5 text-sm transition-colors ${isActive(href) ? 'bg-[#08a8c8] text-white' : 'text-[#009ac1] hover:bg-cyan-50'}`}
-                                        >
-                                            <Icon className="size-4" aria-hidden="true" />
-                                            <span>{label}</span>
-                                        </Link>
-                                    ))}
-                                </div>
-                            )}
-                        </div>}
                         {/* master data */}
                         {visibleMenu.master.length > 0 && <div className="overflow-hidden rounded-md border border-slate-200 bg-slate-50">
                             <button
@@ -201,6 +162,34 @@ export default function VillageSidebar({ open = true, onClose }) {
                                 </div>
                             )}
                         </div>}
+                        {visibleMenu.perangkat.length > 0 && <div className="overflow-hidden rounded-md border border-slate-200 bg-slate-50">
+                            <button
+                                type="button"
+                                onClick={() => toggleGroup('perangkat-desa')}
+                                className={`flex w-full items-center justify-between gap-3 px-3 py-3 text-left text-sm font-medium transition-colors ${isPerangkatDesaRoute ? 'bg-cyan-50 text-cyan-700' : 'text-[#009ac1] hover:bg-cyan-50'}`}
+                            >
+                                <span className="flex items-center gap-3">
+                                    <UserCog className="size-4" aria-hidden="true" />
+                                    <span>Perangkat Desa</span>
+                                </span>
+                                {openGroup === 'perangkat-desa' ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                            </button>
+                            {openGroup === 'perangkat-desa' && (
+                                <div className="border-t border-slate-200 bg-white">
+                                    {visibleMenu.perangkat.map(({ label, href, icon: Icon }) => (
+                                        <Link
+                                            key={href}
+                                            href={href}
+                                            onClick={onClose}
+                                            className={`flex h-[40px] items-center gap-3 px-5 text-sm transition-colors ${isActive(href) ? 'bg-[#08a8c8] text-white' : 'text-[#009ac1] hover:bg-cyan-50'}`}
+                                        >
+                                            <Icon className="size-4" aria-hidden="true" />
+                                            <span>{label}</span>
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </div>}
                         {/* kependudukan */}
                         {visibleMenu.kependudukan.length > 0 && <div className="overflow-hidden rounded-md border border-slate-200 bg-slate-50">
                             <button
@@ -230,6 +219,7 @@ export default function VillageSidebar({ open = true, onClose }) {
                                 </div>
                             )}
                         </div>}
+                        {visibleMenu.reports && <Link href="/laporan" onClick={onClose} className={`flex h-[44px] items-center gap-3 rounded-md px-3 text-sm transition-colors ${isActive('/laporan') ? 'bg-[#08a8c8] text-white' : 'text-[#009ac1] hover:bg-cyan-50'}`}><Gauge className="size-4" aria-hidden="true" /><span>Laporan & Statistik</span></Link>}
 
                         {visibleMenu.system.length > 0 && <div className="overflow-hidden rounded-md border border-slate-200 bg-slate-50">
                             <button

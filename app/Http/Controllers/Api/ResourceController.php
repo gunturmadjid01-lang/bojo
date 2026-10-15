@@ -150,10 +150,12 @@ class ResourceController extends ApiController
                 'rws.*.rts' => ['nullable', 'array'], 'rws.*.rts.*.id' => ['nullable', 'integer'], 'rws.*.rts.*.nomor' => ['required', 'string', 'max:10'], 'rws.*.rts.*.aktif' => ['boolean'],
             ]);
             $rwNumbers = collect($data['rws'] ?? [])->pluck('nomor')->map(fn ($value) => mb_strtolower(trim($value)));
-            if ($rwNumbers->duplicates()->isNotEmpty()) throw ValidationException::withMessages(['rws' => 'Nomor RW dalam satu dusun tidak boleh sama.']);
+            $duplicateRwIndex = $rwNumbers->duplicates()->keys()->first();
+            if ($duplicateRwIndex !== null) throw ValidationException::withMessages(["rws.$duplicateRwIndex.nomor" => 'Nomor RW ini sudah digunakan dalam Dusun yang sama.']);
             foreach ($data['rws'] ?? [] as $index => $rw) {
                 $rtNumbers = collect($rw['rts'] ?? [])->pluck('nomor')->map(fn ($value) => mb_strtolower(trim($value)));
-                if ($rtNumbers->duplicates()->isNotEmpty()) throw ValidationException::withMessages(["rws.$index.rts" => 'Nomor RT dalam satu RW tidak boleh sama.']);
+                $duplicateRtIndex = $rtNumbers->duplicates()->keys()->first();
+                if ($duplicateRtIndex !== null) throw ValidationException::withMessages(["rws.$index.rts.$duplicateRtIndex.nomor" => 'Nomor RT ini sudah digunakan dalam RW yang sama.']);
             }
             return $data;
         }

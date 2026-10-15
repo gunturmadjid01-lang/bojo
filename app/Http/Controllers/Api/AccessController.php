@@ -28,7 +28,7 @@ class AccessController extends ApiController
     public function roles(Request $request): JsonResponse
     {
         $this->authorize($request, 'users');
-        return response()->json(['data' => Role::query()->orderBy('name')->get(['id', 'name'])]);
+        return response()->json(['data' => Role::query()->whereNotIn('name', ['super_admin', 'superadmin', 'Super Admin'])->orderBy('name')->get(['id', 'name'])]);
     }
 
     public function storeUser(Request $request): JsonResponse
@@ -113,7 +113,7 @@ class AccessController extends ApiController
     private function userRules(?User $user = null): array
     {
         $suffix = $user ? ',' . $user->id : '';
-        return ['name' => ['required', 'string', 'max:255'], 'username' => ['required', 'string', 'max:255', 'unique:users,username' . $suffix], 'email' => ['nullable', 'email', 'max:255', 'unique:users,email' . $suffix], 'jenis_kelamin' => ['nullable', Rule::in(['Laki-laki', 'Perempuan'])], 'password' => [$user ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'], 'role' => ['required', 'exists:roles,name']];
+        return ['name' => ['required', 'string', 'max:255'], 'username' => ['required', 'string', 'max:255', 'unique:users,username' . $suffix], 'email' => ['nullable', 'email', 'max:255', 'unique:users,email' . $suffix], 'jenis_kelamin' => ['nullable', Rule::in(['Laki-laki', 'Perempuan'])], 'password' => [$user ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'], 'role' => array_filter(['required', 'exists:roles,name', $user ? null : Rule::notIn(['super_admin', 'superadmin', 'Super Admin'])])];
     }
 
     private function userPayload(User $user): array
