@@ -17,20 +17,6 @@ class UserSeeder extends Seeder
                 'jenis_kelamin' => 'Laki-laki',
                 'role' => 'super_admin',
             ],
-            [
-                'name' => 'Kepala Desa',
-                'username' => 'kepala.desa',
-                'email' => 'kepala.desa@bojo.local',
-                'jenis_kelamin' => 'Laki-laki',
-                'role' => 'kepala_desa',
-            ],
-            [
-                'name' => 'Sekretaris Desa',
-                'username' => 'sekdes',
-                'email' => 'sekdes@bojo.local',
-                'jenis_kelamin' => 'Laki-laki',
-                'role' => 'sekdes',
-            ],
         ];
 
         foreach ($users as $userData) {
@@ -42,7 +28,7 @@ class UserSeeder extends Seeder
                 [
                     ...$userData,
                     'email_verified_at' => now(),
-                    'password' => 'password',
+                    'password' => 'BojoDes@123#',
                 ]
             );
 
