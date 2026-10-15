@@ -58,7 +58,7 @@ return new class extends Migration
             $table->foreignId('perpindahan_penduduk_id')->nullable()->constrained('perpindahan_penduduks')->nullOnDelete();
             $table->foreignId('dibuat_oleh')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
-            $table->index(['kartu_keluarga_id', 'tanggal_mulai', 'tanggal_selesai']);
+            $table->index(['kartu_keluarga_id', 'tanggal_mulai', 'tanggal_selesai'], 'rdkk_kk_mulai_selesai_idx');
         });
 
         if (! Schema::hasColumn('kartu_keluargas', 'perlu_kepala_keluarga_baru')) {
