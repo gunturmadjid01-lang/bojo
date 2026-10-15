@@ -13,6 +13,7 @@ class RolePermissionSeeder extends Seeder
     {
         $roles = [
             'super_admin',
+            'operator',
             'kepala_desa',
             'kepala_dusun',
             'sekdes',
@@ -54,6 +55,7 @@ class RolePermissionSeeder extends Seeder
 
         $defaults = [
             'super_admin' => $permissions,
+            'operator' => collect(),
             'kepala_desa' => $permissions->filter(fn (Permission $permission) => str_starts_with($permission->name, 'view ') || $permission->name === 'lihat-riwayat-penugasan'),
             'sekdes' => $permissions->filter(fn (Permission $permission) => !str_starts_with($permission->name, 'delete ')),
             'kepala_dusun' => $permissions->filter(fn (Permission $permission) => str_starts_with($permission->name, 'view ')),

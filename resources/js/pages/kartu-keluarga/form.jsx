@@ -159,13 +159,13 @@ export default function KartuKeluargaForm({ kartuKeluarga, penduduk = [], desas 
                         </label>
 
                         <label className="block">
-                            <span>{requiredLabel('RW')}</span>
-                            <FormSelect value={data.rw_id} options={filteredRws.map((item) => ({ value: String(item.id), label: `RW ${item.nomor}` }))} onChange={handleRwChange} placeholder="Pilih RW" error={errors.rw_id} className="w-full" />
+                            <span className="mb-2 block text-sm font-medium text-slate-700">RW (opsional)</span>
+                            <FormSelect value={data.rw_id} options={filteredRws.map((item) => ({ value: String(item.id), label: `RW ${item.nomor}` }))} onChange={handleRwChange} placeholder="Pilih jika diketahui" error={errors.rw_id} isClearable className="w-full" />
                             {fieldError('rw_id')}
                         </label>
 
                         <label className="block">
-                            <span>{requiredLabel('RT')}</span>
+                            <span className="mb-2 block text-sm font-medium text-slate-700">RT (opsional)</span>
                             <FormSelect
                                 value={data.rt_id}
                                 options={filteredRts.map((item) => ({ value: String(item.id), label: `RT ${item.nomor}` }))}
@@ -174,8 +174,9 @@ export default function KartuKeluargaForm({ kartuKeluarga, penduduk = [], desas 
                                     setData('rt_id', value);
                                     setData('penduduk_id', '');
                                 }}
-                                placeholder="Pilih RT"
+                                placeholder="Pilih jika diketahui"
                                 error={errors.rt_id}
+                                isClearable
                                 className="w-full"
                             />
                             {fieldError('rt_id')}

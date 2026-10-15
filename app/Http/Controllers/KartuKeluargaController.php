@@ -106,7 +106,7 @@ class KartuKeluargaController extends Controller
             $pendudukTambahan = Penduduk::query()->whereIn('id', $anggotaTambahan->pluck('penduduk_id'))->lockForUpdate()->get()->keyBy('id');
             foreach ($anggotaTambahan as $index => $anggota) {
                 $calon = $pendudukTambahan->get($anggota['penduduk_id']);
-                if (! $calon || $calon->status_penduduk !== 'aktif' || ! $calon->masih_hidup || (int) $calon->dusun_id !== (int) ($validated['dusun_id'] ?? 0) || (int) $calon->rw_id !== (int) ($validated['rw_id'] ?? 0) || (int) $calon->rt_id !== (int) ($validated['rt_id'] ?? 0)) {
+                if (! $calon || $calon->status_penduduk !== 'aktif' || ! $calon->masih_hidup || ($validated['dusun_id'] !== null && (int) $calon->dusun_id !== (int) $validated['dusun_id']) || ($validated['rw_id'] !== null && (int) $calon->rw_id !== (int) $validated['rw_id']) || ($validated['rt_id'] !== null && (int) $calon->rt_id !== (int) $validated['rt_id'])) {
                     throw ValidationException::withMessages(["anggotas.$index.penduduk_id" => 'Anggota harus aktif, masih hidup, dan berasal dari wilayah KK yang dipilih.']);
                 }
             }

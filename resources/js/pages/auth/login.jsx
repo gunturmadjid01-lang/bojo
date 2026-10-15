@@ -8,7 +8,7 @@ export default function Login() {
     const { data, setData, post, processing, errors } = useForm({
         login: '',
         password: '',
-        remember: true,
+        remember: false,
     });
 
     const villageName = desa?.nama_desa || 'Desa Bojo';
@@ -74,8 +74,8 @@ export default function Login() {
                             </label>
                             <div className="flex items-center justify-between gap-4 text-sm">
                                 <label className="flex items-center gap-2 text-slate-600">
-                                    <input type="checkbox" checked={data.remember} onChange={(event) => setData('remember', event.target.checked)} className="size-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" />
-                                    Ingat saya
+                                    <input id="remember" name="remember" type="checkbox" checked={data.remember} onChange={(event) => setData('remember', event.target.checked)} className="size-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" />
+                                    <span><span className="block font-medium text-slate-700">Ingat saya</span><span className="block text-xs text-slate-400">Tetap masuk setelah browser ditutup.</span></span>
                                 </label>
                                 <button type="button" className="font-medium text-[#079fbd] hover:text-[#067f98]">Lupa password?</button>
                             </div>

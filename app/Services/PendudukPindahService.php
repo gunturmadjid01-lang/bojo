@@ -219,9 +219,9 @@ class PendudukPindahService
     {
         if (($payload['jenis_tujuan_kk'] ?? null) === 'kk_baru') {
             $data = $payload['kk_baru'] ?? [];
-            foreach (['nomor_kk', 'dusun_id', 'rw_id', 'rt_id', 'alamat'] as $field) if (blank($data[$field] ?? null)) throw ValidationException::withMessages(["kk_baru.$field" => 'Field wajib diisi.']);
+            foreach (['nomor_kk', 'dusun_id', 'alamat'] as $field) if (blank($data[$field] ?? null)) throw ValidationException::withMessages(["kk_baru.$field" => 'Field wajib diisi.']);
             $dusun = Dusun::withoutGlobalScope('wilayah')->findOrFail($data['dusun_id']);
-            $kk = KartuKeluarga::create(['desa_id' => $dusun->desa_id, 'dusun_id' => $data['dusun_id'], 'rw_id' => $data['rw_id'], 'rt_id' => $data['rt_id'], 'nomor_kk' => $data['nomor_kk'], 'alamat' => $data['alamat'], 'kode_pos' => $data['kode_pos'] ?? null, 'tanggal_diterbitkan' => $data['tanggal_diterbitkan'] ?? $date, 'status' => 'aktif']);
+            $kk = KartuKeluarga::create(['desa_id' => $dusun->desa_id, 'dusun_id' => $data['dusun_id'], 'rw_id' => $data['rw_id'] ?? null, 'rt_id' => $data['rt_id'] ?? null, 'nomor_kk' => $data['nomor_kk'], 'alamat' => $data['alamat'], 'kode_pos' => $data['kode_pos'] ?? null, 'tanggal_diterbitkan' => $data['tanggal_diterbitkan'] ?? $date, 'status' => 'aktif']);
             return $kk;
         }
         $kk = KartuKeluarga::query()->where('status', 'aktif')->find($payload['kartu_keluarga_tujuan_id'] ?? null);
@@ -239,10 +239,10 @@ class PendudukPindahService
     private function moveFamilyWithinVillage(array $payload, KartuKeluarga $kk, array $members, string $date, ?User $actor): KartuKeluarga
     {
         $data = $payload['domisili_tujuan'] ?? $payload['kk_baru'] ?? [];
-        foreach (['dusun_id', 'rw_id', 'rt_id', 'alamat'] as $field) if (blank($data[$field] ?? null)) throw ValidationException::withMessages(["domisili_tujuan.$field" => 'Field wajib diisi.']);
+        foreach (['dusun_id', 'alamat'] as $field) if (blank($data[$field] ?? null)) throw ValidationException::withMessages(["domisili_tujuan.$field" => 'Field wajib diisi.']);
         $activeHistory = RiwayatDomisiliKartuKeluarga::query()->where('kartu_keluarga_id', $kk->id)->whereNull('tanggal_selesai')->latest('id')->first();
         if ($activeHistory) $activeHistory->update(['tanggal_selesai' => date('Y-m-d', strtotime($date.' -1 day'))]);
-        $kk->update(['dusun_id' => $data['dusun_id'], 'rw_id' => $data['rw_id'], 'rt_id' => $data['rt_id'], 'alamat' => $data['alamat'], 'kode_pos' => $data['kode_pos'] ?? $kk->kode_pos]);
+        $kk->update(['dusun_id' => $data['dusun_id'], 'rw_id' => $data['rw_id'] ?? null, 'rt_id' => $data['rt_id'] ?? null, 'alamat' => $data['alamat'], 'kode_pos' => $data['kode_pos'] ?? $kk->kode_pos]);
         foreach ($members as $member) $member->update(['dusun_id' => $kk->dusun_id, 'rw_id' => $kk->rw_id, 'rt_id' => $kk->rt_id, 'alamat' => $kk->alamat, 'status_penduduk' => 'aktif', 'masih_hidup' => true]);
         RiwayatDomisiliKartuKeluarga::create(['kartu_keluarga_id' => $kk->id, 'desa_id' => $kk->desa_id, 'dusun_id' => $kk->dusun_id, 'rw_id' => $kk->rw_id, 'rt_id' => $kk->rt_id, 'alamat' => $kk->alamat, 'kode_pos' => $kk->kode_pos, 'tanggal_mulai' => $date, 'alasan_perubahan' => 'pindah_domisili', 'dibuat_oleh' => $actor?->id]);
         return $kk;
@@ -417,7 +417,7 @@ class PendudukPindahService
             $rwId = $kkPayload['rw_id'] ?? null;
             $rtId = $kkPayload['rt_id'] ?? null;
 
-            if (! $nomorKk || ! $alamat || ! $dusunId || ! $rwId || ! $rtId) {
+            if (! $nomorKk || ! $alamat || ! $dusunId) {
                 throw ValidationException::withMessages(['kk_baru' => 'Data KK baru wajib lengkap.']);
             }
 
@@ -426,10 +426,10 @@ class PendudukPindahService
             }
 
             $dusun = Dusun::query()->findOrFail($dusunId);
-            $rw = RW::query()->findOrFail($rwId);
-            $rt = RT::query()->findOrFail($rtId);
+            $rw = $rwId ? RW::query()->findOrFail($rwId) : null;
+            $rt = $rtId ? RT::query()->findOrFail($rtId) : null;
 
-            if ((int) $rw->dusun_id !== (int) $dusunId || (int) $rt->rw_id !== (int) $rwId) {
+            if (($rw && (int) $rw->dusun_id !== (int) $dusunId) || ($rt && $rwId && (int) $rt->rw_id !== (int) $rwId)) {
                 throw ValidationException::withMessages(['kk_baru' => 'Dusun, RW, dan RT yang dipilih tidak konsisten.']);
             }
 

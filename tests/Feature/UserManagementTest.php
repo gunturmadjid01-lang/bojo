@@ -26,7 +26,12 @@ class UserManagementTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('users/form')
                 ->where('user', null)
-                ->has('roles', 4));
+                ->has('roles', 5));
+
+        $this->assertDatabaseHas('roles', [
+            'name' => 'operator',
+            'guard_name' => 'web',
+        ]);
 
         $response = $this->actingAs($admin)->post('/users', [
             'name' => 'Operator Desa',

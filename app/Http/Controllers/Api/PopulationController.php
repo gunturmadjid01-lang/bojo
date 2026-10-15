@@ -204,7 +204,7 @@ class PopulationController extends ApiController
                 'penduduk' => ['required', 'array'], 'penduduk.nik' => ['required', 'string', 'max:16', 'unique:penduduks,nik'],
                 'penduduk.nama_lengkap' => ['required', 'string', 'max:255'], 'penduduk.jenis_kelamin' => ['required', 'in:Laki-laki,Perempuan'],
                 'penduduk.alamat' => ['required', 'string'], 'penduduk.dusun_id' => ['required', new \App\Rules\WilayahExists(\App\Models\Dusun::class)],
-                'penduduk.rw_id' => ['required', new \App\Rules\WilayahExists(\App\Models\RW::class)], 'penduduk.rt_id' => ['required', new \App\Rules\WilayahExists(\App\Models\RT::class)],
+                'penduduk.rw_id' => ['nullable', new \App\Rules\WilayahExists(\App\Models\RW::class)], 'penduduk.rt_id' => ['nullable', new \App\Rules\WilayahExists(\App\Models\RT::class)],
                 'penduduk.tempat_lahir' => ['nullable', 'string', 'max:255'], 'penduduk.tanggal_lahir' => ['nullable', 'date'],
                 'penduduk.agama' => ['nullable', 'string', 'max:50'], 'penduduk.golongan_darah' => ['nullable', 'in:A,B,AB,O'],
                 'penduduk.status_perkawinan' => ['nullable', 'string', 'max:50'], 'penduduk.pendidikan_id' => ['nullable', 'exists:pendidikans,id'],

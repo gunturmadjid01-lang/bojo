@@ -19,6 +19,7 @@ class AuthController extends Controller
             'login' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string', 'max:255'],
             'device_name' => ['required', 'string', 'max:100'],
+            'remember' => ['sometimes', 'boolean'],
         ]);
         $key = Str::transliterate(Str::lower($data['login']).'|'.$request->ip());
         if (RateLimiter::tooManyAttempts($key, 5)) {

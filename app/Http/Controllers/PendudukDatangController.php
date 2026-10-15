@@ -75,7 +75,7 @@ class PendudukDatangController extends Controller
             'penduduk.nama_ayah' => ['nullable', 'string', 'max:255'], 'penduduk.nama_ibu' => ['nullable', 'string', 'max:255'],
             'penduduk.telepon' => ['nullable', 'string', 'max:50'], 'penduduk.email' => ['nullable', 'email', 'max:255'],
             'penduduk.alamat' => ['required', 'string'], 'penduduk.dusun_id' => ['required', new \App\Rules\WilayahExists(\App\Models\Dusun::class)],
-            'penduduk.rw_id' => ['required', new \App\Rules\WilayahExists(\App\Models\RW::class)], 'penduduk.rt_id' => ['required', new \App\Rules\WilayahExists(\App\Models\RT::class)],
+            'penduduk.rw_id' => ['nullable', new \App\Rules\WilayahExists(\App\Models\RW::class)], 'penduduk.rt_id' => ['nullable', new \App\Rules\WilayahExists(\App\Models\RT::class)],
         ]);
         $arrival = app(\App\Services\IndividualMigrationService::class)->arrival($validated, auth()->user());
         return to_route('penduduk-datang.show', $arrival)->with('success', 'Penduduk masuk berhasil ditambahkan.');

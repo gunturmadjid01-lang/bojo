@@ -226,7 +226,7 @@ class PendudukDatangService
             $rwId = $kkPayload['rw_id'] ?? null;
             $rtId = $kkPayload['rt_id'] ?? null;
 
-            if (! $nomorKk || ! $alamat || ! $dusunId || ! $rwId || ! $rtId) {
+            if (! $nomorKk || ! $alamat || ! $dusunId) {
                 throw ValidationException::withMessages(['kk_baru' => 'Data kartu keluarga baru wajib lengkap.']);
             }
 
@@ -235,10 +235,10 @@ class PendudukDatangService
             }
 
             $dusun = Dusun::query()->findOrFail($dusunId);
-            $rw = RW::query()->findOrFail($rwId);
-            $rt = RT::query()->findOrFail($rtId);
+            $rw = $rwId ? RW::query()->findOrFail($rwId) : null;
+            $rt = $rtId ? RT::query()->findOrFail($rtId) : null;
 
-            if ((int) $rw->dusun_id !== (int) $dusunId || (int) $rt->rw_id !== (int) $rwId) {
+            if (($rw && (int) $rw->dusun_id !== (int) $dusunId) || ($rt && $rwId && (int) $rt->rw_id !== (int) $rwId)) {
                 throw ValidationException::withMessages(['kk_baru' => 'Dusun, RW, dan RT yang dipilih tidak konsisten.']);
             }
 
