@@ -12,7 +12,7 @@ class UserSeeder extends Seeder
         $users = [
             [
                 'name' => 'Super Administrator',
-                'username' => 'superadmin',
+                'username' => 'superbojo',
                 'email' => 'superadmin@bojo.local',
                 'jenis_kelamin' => 'Laki-laki',
                 'role' => 'super_admin',
