@@ -177,9 +177,18 @@ class StatistikKependudukanService
 
     private function groupedString(Builder $query, string $column): array
     {
-        return $query->selectRaw("COALESCE(NULLIF(TRIM({$column}), ''), 'Belum Diketahui') AS label, COUNT(*) AS value")
-            ->groupByRaw("COALESCE(NULLIF(TRIM({$column}), ''), 'Belum Diketahui')")
-            ->orderByDesc('value')->get()->map(fn ($row) => ['label' => $row->label, 'value' => (int) $row->value])->all();
+        return $query->selectRaw("{$column} AS raw_label, COUNT(*) AS value")
+            ->groupBy($column)
+            ->get()
+            ->map(fn ($row) => [
+                'label' => filled(trim((string) $row->raw_label)) ? trim((string) $row->raw_label) : 'Belum Diketahui',
+                'value' => (int) $row->value,
+            ])
+            ->groupBy('label')
+            ->map(fn ($items, string $label) => ['label' => $label, 'value' => $items->sum('value')])
+            ->sortByDesc('value')
+            ->values()
+            ->all();
     }
 
     private function groupedMaster(Builder $query, string $master, string $foreignKey, ?int $limit = null): array
