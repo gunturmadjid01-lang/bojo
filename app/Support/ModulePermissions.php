@@ -68,8 +68,12 @@ class ModulePermissions
 
     public static function moduleForLabel(string $label): ?string
     {
-        foreach (self::MODULES as $module => [, $moduleLabel]) {
-            if (strcasecmp($moduleLabel, $label) === 0) return $module;
+        foreach (self::MODULES as $module => [$table, $moduleLabel]) {
+            if (collect([$module, $table, $moduleLabel])
+                ->map(fn (string $value): string => strtolower(str_replace(['_', '-'], ' ', trim($value))))
+                ->contains(strtolower(str_replace(['_', '-'], ' ', trim($label))))) {
+                return $module;
+            }
         }
 
         return null;
