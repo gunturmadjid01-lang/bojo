@@ -1,0 +1,12 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Logo Desa Bojo</title>
+  <desc id="desc">Logo default Desa Bojo dengan rumah, sawah, dan matahari</desc>
+  <circle cx="64" cy="64" r="60" fill="#08b4d4"/>
+  <circle cx="64" cy="43" r="18" fill="#ffd166"/>
+  <path d="M13 78c17-11 30-9 47 0 17 9 29 10 55-4v31H13V78Z" fill="#2a9d8f"/>
+  <path d="M13 92c18-11 31-8 47 1 17 9 30 9 55-4v16H13V92Z" fill="#75b798"/>
+  <path d="m38 65 26-22 26 22v30H38V65Z" fill="#fff"/>
+  <path d="m33 64 31-27 31 27-5 6-26-23-26 23-5-6Z" fill="#0b7285"/>
+  <path d="M58 95V76h12v19" fill="#f4a261"/>
+  <path d="M49 68h12v10H49zM67 68h12v10H67z" fill="#90e0ef"/>
+</svg>
