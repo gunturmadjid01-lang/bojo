@@ -8,8 +8,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Desa extends Model
 {
-    use \App\Models\Concerns\HasWilayahScope;
-
     use HasFactory;
 
     protected $fillable = [
