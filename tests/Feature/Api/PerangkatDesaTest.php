@@ -60,13 +60,13 @@ class PerangkatDesaTest extends TestCase
     {
         $user = User::factory()->create();
         Permission::findOrCreate('lihat-riwayat-penugasan');
+        Permission::findOrCreate('view penugasan-perangkat');
         $user->givePermissionTo('lihat-riwayat-penugasan');
         Sanctum::actingAs($user, ['api:read', 'api:write']);
 
         $this->getJson('/api/v1/penugasan-perangkat/history')->assertForbidden();
         $this->getJson('/api/v1/penugasan-perangkat')->assertForbidden();
 
-        Permission::findOrCreate('view penugasan-perangkat');
         $user->givePermissionTo('view penugasan-perangkat');
 
         $this->getJson('/api/v1/penugasan-perangkat/history')->assertOk();
