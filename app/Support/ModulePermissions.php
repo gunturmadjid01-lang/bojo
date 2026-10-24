@@ -6,6 +6,12 @@ use App\Models\User;
 
 class ModulePermissions
 {
+    public const LEGACY_ASSIGNMENT_PERMISSIONS = [
+        'lihat-penugasan-perangkat', 'lihat-riwayat-penugasan',
+        'tambah-penugasan-perangkat', 'ganti-penugasan-perangkat',
+        'akhiri-penugasan-perangkat',
+    ];
+
     public const MODULES = [
         'desa' => ['desas', 'Desa'], 'dusun' => ['dusuns', 'Dusun'],
         'penduduk' => ['penduduks', 'Penduduk'], 'kartu-keluarga' => ['kartu_keluargas', 'Kartu Keluarga'],
@@ -84,6 +90,7 @@ class ModulePermissions
         return collect(array_keys(self::MODULES))
             ->flatMap(fn (string $module) => collect(['view', 'create', 'edit', 'delete'])
                 ->flatMap(fn (string $action) => self::permissionNames($module, $action)))
+            ->concat(self::LEGACY_ASSIGNMENT_PERMISSIONS)
             ->unique()
             ->values();
     }

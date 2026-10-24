@@ -29,17 +29,6 @@ class AuthorizeModule
             default => 'edit',
         };
         $allowed = ModulePermissions::allows($request->user(), $module, $action);
-        if ($module === 'penugasan-perangkat') {
-            $permission = match ($method) {
-                'history' => 'lihat-riwayat-penugasan',
-                'index', 'show' => 'lihat-penugasan-perangkat',
-                'create', 'store' => 'tambah-penugasan-perangkat',
-                'replaceForm', 'replace' => 'ganti-penugasan-perangkat',
-                'endForm', 'end' => 'akhiri-penugasan-perangkat',
-                default => '',
-            };
-            $allowed = $allowed || $request->user()->getAllPermissions()->contains('name', $permission);
-        }
         abort_unless($allowed, 403, 'Anda tidak memiliki izin untuk tindakan ini.');
         return $next($request);
     }

@@ -60,7 +60,7 @@ class PerangkatDesaController extends ApiController
 
     public function assignments(Request $request): JsonResponse
     {
-        $this->authorizeAssignment($request, 'view', ['lihat-penugasan-perangkat']);
+        $this->authorizeAssignment($request, 'view');
         $items = $this->assignmentQuery()->aktif()
             ->when($request->filled('search'), fn ($query) => $query->whereHas('perangkatDesa.user', fn ($user) => $user->where('name', 'like', '%'.$request->string('search').'%')))
             ->latest('tanggal_mulai')->paginate($this->perPage($request));
@@ -70,7 +70,7 @@ class PerangkatDesaController extends ApiController
 
     public function history(Request $request): JsonResponse
     {
-        $this->authorizeAssignment($request, 'view', ['lihat-riwayat-penugasan']);
+        $this->authorizeAssignment($request, 'view');
         $items = $this->assignmentQuery()
             ->when($request->filled('search'), fn ($query) => $query->whereHas('perangkatDesa.user', fn ($user) => $user->where('name', 'like', '%'.$request->string('search').'%')))
             ->latest()->paginate($this->perPage($request));
@@ -80,13 +80,13 @@ class PerangkatDesaController extends ApiController
 
     public function assignmentShow(Request $request, PenugasanPerangkat $penugasanPerangkat): JsonResponse
     {
-        $this->authorizeAssignment($request, 'view', ['lihat-penugasan-perangkat', 'lihat-riwayat-penugasan']);
+        $this->authorizeAssignment($request, 'view');
         return response()->json(['data' => $penugasanPerangkat->load($this->assignmentRelations())]);
     }
 
     public function options(Request $request): JsonResponse
     {
-        $this->authorizeAssignment($request, 'create', ['tambah-penugasan-perangkat', 'ganti-penugasan-perangkat']);
+        $this->authorizeAssignment($request, 'create');
         return response()->json([
             'jabatans' => JabatanDesa::where('aktif', true)->orderBy('nama')->get(['id', 'kode', 'nama', 'tingkat']),
             'users' => User::orderBy('name')->get(['id', 'name', 'username']),
@@ -97,14 +97,14 @@ class PerangkatDesaController extends ApiController
 
     public function assignmentStore(Request $request): JsonResponse
     {
-        $this->authorizeAssignment($request, 'create', ['tambah-penugasan-perangkat']);
+        $this->authorizeAssignment($request, 'create');
         $assignment = $this->service->create($request->validate($this->assignmentRules()), $request->user());
         return response()->json(['message' => 'Penugasan perangkat desa berhasil disimpan.', 'data' => $assignment->load($this->assignmentRelations())], 201);
     }
 
     public function replace(Request $request, PenugasanPerangkat $penugasanPerangkat): JsonResponse
     {
-        $this->authorizeAssignment($request, 'edit', ['ganti-penugasan-perangkat']);
+        $this->authorizeAssignment($request, 'edit');
         $data = $request->validate([
             'user_id' => ['required', 'exists:users,id'], 'tanggal_selesai_lama' => ['required', 'date'],
             'tanggal_mulai' => ['required', 'date', 'after:tanggal_selesai_lama'], 'tanggal_selesai' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
@@ -117,7 +117,7 @@ class PerangkatDesaController extends ApiController
 
     public function end(Request $request, PenugasanPerangkat $penugasanPerangkat): JsonResponse
     {
-        $this->authorizeAssignment($request, 'edit', ['akhiri-penugasan-perangkat']);
+        $this->authorizeAssignment($request, 'edit');
         $assignment = $this->service->end($penugasanPerangkat, $request->validate([
             'tanggal_selesai' => ['required', 'date'], 'nomor_sk_pemberhentian' => ['nullable', 'string'],
             'tanggal_sk_pemberhentian' => ['nullable', 'date'], 'catatan' => ['nullable', 'string'],
@@ -125,9 +125,9 @@ class PerangkatDesaController extends ApiController
         return response()->json(['message' => 'Penugasan berhasil diakhiri.', 'data' => $assignment->load($this->assignmentRelations())]);
     }
 
-    private function authorizeAssignment(Request $request, string $action, array $special): void
+    private function authorizeAssignment(Request $request, string $action): void
     {
-        abort_unless(ModulePermissions::allows($request->user(), 'penugasan-perangkat', $action) || ModulePermissions::hasAnyPermission($request->user(), $special), 403, 'Anda tidak memiliki izin untuk modul ini.');
+        abort_unless(ModulePermissions::allows($request->user(), 'penugasan-perangkat', $action), 403, 'Anda tidak memiliki izin untuk modul ini.');
         abort_unless($action === 'view' || $request->user()->tokenCan('api:write'), 403, 'Token tidak memiliki kemampuan menulis.');
     }
 

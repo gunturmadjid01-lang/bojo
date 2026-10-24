@@ -22,6 +22,21 @@ class PerangkatDesaTest extends TestCase
 
         $this->getJson('/api/v1/jabatan-desa')->assertOk();
         $this->postJson('/api/v1/jabatan-desa', ['nama' => 'Kaur Baru', 'tingkat' => 'desa', 'aktif' => true])->assertForbidden();
+
+        $jabatan = JabatanDesa::create([
+            'kode' => 'JBD-0001',
+            'nama' => 'Kaur Lama',
+            'tingkat' => 'desa',
+            'aktif' => true,
+            'bawaan_sistem' => false,
+        ]);
+        $this->putJson("/api/v1/jabatan-desa/{$jabatan->id}", [
+            'nama' => 'Kaur Diubah',
+            'tingkat' => 'desa',
+            'aktif' => true,
+        ])->assertForbidden();
+        $this->deleteJson("/api/v1/jabatan-desa/{$jabatan->id}")->assertForbidden();
+        $this->assertDatabaseHas('jabatan_desas', ['id' => $jabatan->id, 'nama' => 'Kaur Lama']);
     }
 
     public function test_jabatan_api_creates_generated_code_and_protects_system_default(): void
@@ -41,14 +56,20 @@ class PerangkatDesaTest extends TestCase
         $this->assertDatabaseHas('jabatan_desas', ['id' => $system->id, 'nama' => 'Sekretaris Desa']);
     }
 
-    public function test_history_permission_does_not_open_active_assignment_list(): void
+    public function test_legacy_assignment_permission_no_longer_bypasses_standard_view_permission(): void
     {
         $user = User::factory()->create();
         Permission::findOrCreate('lihat-riwayat-penugasan');
         $user->givePermissionTo('lihat-riwayat-penugasan');
         Sanctum::actingAs($user, ['api:read', 'api:write']);
 
-        $this->getJson('/api/v1/penugasan-perangkat/history')->assertOk();
+        $this->getJson('/api/v1/penugasan-perangkat/history')->assertForbidden();
         $this->getJson('/api/v1/penugasan-perangkat')->assertForbidden();
+
+        Permission::findOrCreate('view penugasan-perangkat');
+        $user->givePermissionTo('view penugasan-perangkat');
+
+        $this->getJson('/api/v1/penugasan-perangkat/history')->assertOk();
+        $this->getJson('/api/v1/penugasan-perangkat')->assertOk();
     }
 }
