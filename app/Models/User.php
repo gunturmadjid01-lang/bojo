@@ -15,6 +15,17 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
+    public function isSuperAdmin(): bool
+    {
+        return $this->getRoleNames()->contains(
+            fn (string $role): bool => in_array(
+                strtolower(str_replace([' ', '-'], '_', $role)),
+                ['super_admin', 'superadmin'],
+                true,
+            ),
+        );
+    }
+
     public function perangkatDesa(): HasOne
     {
         return $this->hasOne(PerangkatDesa::class);

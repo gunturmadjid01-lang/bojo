@@ -47,11 +47,13 @@ class AccessController extends ApiController
     {
         $this->authorize($request, 'users', 'edit');
         $user = User::query()->findOrFail((int) $id);
-        $data = $request->validate($this->userRules($user));
+        $data = $request->validate($this->userRules($user, $user->isSuperAdmin()));
         $userData = ['name' => $data['name'], 'username' => $data['username'], 'email' => $data['email'] ?? null, 'jenis_kelamin' => $data['jenis_kelamin'] ?? null];
         if (!empty($data['password'])) $userData['password'] = Hash::make($data['password']);
         $user->update($userData);
-        $user->syncRoles([$data['role']]);
+        if (! $user->isSuperAdmin()) {
+            $user->syncRoles([$data['role']]);
+        }
         return response()->json(['data' => $this->userPayload($user->fresh()->load('roles:id,name'))]);
     }
 
@@ -110,10 +112,24 @@ class AccessController extends ApiController
         return collect(ModulePermissions::GROUPS)->flatMap(fn ($items) => collect($items)->flatMap(fn ($title) => collect(['view', 'create', 'edit', 'delete'])->map(fn ($action) => "$action " . strtolower($title))))->values()->all();
     }
 
-    private function userRules(?User $user = null): array
+    private function userRules(?User $user = null, bool $isSuperAdmin = false): array
     {
         $suffix = $user ? ',' . $user->id : '';
-        return ['name' => ['required', 'string', 'max:255'], 'username' => ['required', 'string', 'max:255', 'unique:users,username' . $suffix], 'email' => ['nullable', 'email', 'max:255', 'unique:users,email' . $suffix], 'jenis_kelamin' => ['nullable', Rule::in(['Laki-laki', 'Perempuan'])], 'password' => [$user ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'], 'role' => array_filter(['required', 'exists:roles,name', $user ? null : Rule::notIn(['super_admin', 'superadmin', 'Super Admin'])])];
+        $roleRules = ['required', 'exists:roles,name'];
+
+        if (! $user) {
+            $roleRules[] = Rule::notIn(['super_admin', 'superadmin', 'Super Admin']);
+        } elseif ($isSuperAdmin) {
+            $roleRules[] = function (string $attribute, mixed $value, \Closure $fail): void {
+                $normalizedRole = strtolower(str_replace([' ', '-'], '_', (string) $value));
+
+                if (! in_array($normalizedRole, ['super_admin', 'superadmin'], true)) {
+                    $fail('Role Super Admin tidak dapat diubah.');
+                }
+            };
+        }
+
+        return ['name' => ['required', 'string', 'max:255'], 'username' => ['required', 'string', 'max:255', 'unique:users,username' . $suffix], 'email' => ['nullable', 'email', 'max:255', 'unique:users,email' . $suffix], 'jenis_kelamin' => ['nullable', Rule::in(['Laki-laki', 'Perempuan'])], 'password' => [$user ? 'nullable' : 'required', 'string', 'min:8', 'confirmed'], 'role' => $roleRules];
     }
 
     private function userPayload(User $user): array

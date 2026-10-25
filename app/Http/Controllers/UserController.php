@@ -68,6 +68,8 @@ class UserController extends Controller
 
     public function update(Request $request, User $user): RedirectResponse
     {
+        $isSuperAdmin = $user->isSuperAdmin();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', 'unique:users,username,' . $user->id],
@@ -75,7 +77,17 @@ class UserController extends Controller
             'jenis_kelamin' => ['nullable', 'in:Laki-laki,Perempuan'],
             'avatar' => ['sometimes', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
-            'role' => ['required', 'exists:roles,name'],
+            'role' => [
+                'required',
+                'exists:roles,name',
+                function (string $attribute, mixed $value, \Closure $fail) use ($isSuperAdmin): void {
+                    $normalizedRole = strtolower(str_replace([' ', '-'], '_', (string) $value));
+
+                    if ($isSuperAdmin && ! in_array($normalizedRole, ['super_admin', 'superadmin'], true)) {
+                        $fail('Role Super Admin tidak dapat diubah.');
+                    }
+                },
+            ],
         ]);
 
         if ($request->hasFile('avatar')) {
@@ -93,7 +105,9 @@ class UserController extends Controller
         }
 
         $user->update(collect($validated)->except('role')->all());
-        $user->syncRoles([$validated['role']]);
+        if (! $isSuperAdmin) {
+            $user->syncRoles([$validated['role']]);
+        }
 
         return to_route('users.show', $user)->with('success', 'User berhasil diperbarui.');
     }

@@ -77,4 +77,29 @@ class UserManagementTest extends TestCase
                         && in_array('create users', $group['permissions'], true)
                 )));
     }
+
+    public function test_super_admin_role_cannot_be_changed_when_user_is_edited(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+
+        $actor = User::factory()->create();
+        $actor->assignRole('super_admin');
+
+        $superBojo = User::factory()->create(['username' => 'superbojo']);
+        $superBojo->assignRole('super_admin');
+
+        $response = $this->actingAs($actor)->put("/users/{$superBojo->id}", [
+            'name' => $superBojo->name,
+            'username' => $superBojo->username,
+            'email' => $superBojo->email,
+            'jenis_kelamin' => 'Laki-laki',
+            'password' => '',
+            'password_confirmation' => '',
+            'role' => 'operator',
+        ]);
+
+        $response->assertSessionHasErrors(['role']);
+        $this->assertTrue($superBojo->fresh()->hasRole('super_admin'));
+        $this->assertFalse($superBojo->fresh()->hasRole('operator'));
+    }
 }

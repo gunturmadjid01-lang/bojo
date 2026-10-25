@@ -9,6 +9,7 @@ export default function UserForm({ user, roles = [] }) {
     const [showPassword, setShowPassword] = useState(false);
     const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
     const [preview, setPreview] = useState(user?.avatar ? `/storage/${user.avatar}` : '');
+    const isSuperAdmin = user?.roles?.some((role) => ['super_admin', 'superadmin'].includes(String(role.name).toLowerCase().replace(/[ -]+/g, '_')));
     const selectableRoles = roles.filter((role) => !['super_admin', 'superadmin'].includes(String(role.name).toLowerCase().replace(/[ -]+/g, '_')));
    const {
     data,
@@ -181,13 +182,20 @@ export default function UserForm({ user, roles = [] }) {
                             </label>
                             <label className="block">
                                 <span>{requiredLabel('Role')}</span>
-                                <FormSelect
-                                    value={data.role}
-                                    options={selectableRoles.map((role) => ({ value: role.name, label: role.name }))}
-                                    onChange={(value) => setData('role', value)}
-                                    placeholder="Pilih role"
-                                    error={errors.role}
-                                />
+                                {isSuperAdmin ? (
+                                    <>
+                                        <input value={data.role} readOnly className={`${inputClass('role')} cursor-not-allowed bg-slate-100 text-slate-500`} />
+                                        <p className="mt-1 text-xs text-slate-500">Role Super Admin dilindungi dan tidak dapat diganti.</p>
+                                    </>
+                                ) : (
+                                    <FormSelect
+                                        value={data.role}
+                                        options={selectableRoles.map((role) => ({ value: role.name, label: role.name }))}
+                                        onChange={(value) => setData('role', value)}
+                                        placeholder="Pilih role"
+                                        error={errors.role}
+                                    />
+                                )}
                                 {fieldError('role')}
                             </label>
                             <label className="block">
