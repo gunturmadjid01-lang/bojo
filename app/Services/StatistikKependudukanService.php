@@ -306,7 +306,7 @@ class StatistikKependudukanService
             ],
             'monthly' => $this->monthly($base, 'tanggal_pindah', $year),
             'monthlyTitle' => 'Jumlah Penduduk Keluar per Bulan',
-            'regionTitle' => $this->regionTitle('Penduduk Keluar berdasarkan'),
+            'regionTitle' => $this->regionTitle('Jumlah Penduduk Keluar'),
             'regionValues' => $this->regionValues($yearQuery, 'penduduk_pindahs', 'penduduks'),
         ];
     }
@@ -322,7 +322,7 @@ class StatistikKependudukanService
             ],
             'monthly' => $this->monthly($base, 'tanggal_pindah', $year),
             'monthlyTitle' => 'Jumlah Penduduk Keluar per Bulan',
-            'regionTitle' => 'Penduduk Keluar berdasarkan Dusun',
+            'regionTitle' => 'Jumlah Penduduk Keluar per Dusun',
             'regionValues' => [],
         ];
     }
@@ -475,7 +475,7 @@ class StatistikKependudukanService
     {
         $regions = $this->allRegions();
         $level = $regions[0]['level'] ?? 'dusun';
-        return $prefix.' '.($level === 'dusun' ? 'Dusun' : strtoupper($level));
+        return $prefix.' per '.($level === 'dusun' ? 'Dusun' : strtoupper($level));
     }
 
     private function regionValues(Builder $query, string $baseTable, ?string $relationTable = null): array
