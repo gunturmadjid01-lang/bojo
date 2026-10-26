@@ -39,9 +39,9 @@ class PopulationController extends ApiController
         } elseif ($module === 'kematian') {
             $query->with('penduduk:id,nik,nama_lengkap');
         } elseif ($module === 'penduduk-datang') {
-            $query->with(['penduduk:id,nik,nama_lengkap', 'kartuKeluargaTujuan:id,nomor_kk,alamat,dusun_id,rw_id,rt_id', 'kartuKeluargaTujuan.anggotaKeluarga.penduduk:id,nik,nama_lengkap,jenis_kelamin', 'anggotaKedatangan.penduduk:id,nik,nama_lengkap,jenis_kelamin']);
+            $query->with(['penduduk', 'kartuKeluargaTujuan:id,nomor_kk,alamat,dusun_id,rw_id,rt_id', 'kartuKeluargaTujuan.anggotaKeluarga.penduduk:id,nik,nama_lengkap,jenis_kelamin', 'anggotaKedatangan.penduduk']);
         } else {
-            $query->with(['penduduk:id,nik,nama_lengkap', 'kartuKeluargaAsal:id,nomor_kk', 'kartuKeluargaTujuan:id,nomor_kk']);
+            $query->with(['penduduk', 'kartuKeluargaAsal:id,nomor_kk', 'kartuKeluargaTujuan:id,nomor_kk']);
         }
         $this->applyFilters($request, $query, $module);
 
@@ -57,8 +57,8 @@ class PopulationController extends ApiController
         if ($module === 'anggota-kartu-keluarga') $query->with(['kartuKeluarga:id,nomor_kk,dusun_id,rw_id,rt_id', 'kartuKeluarga.dusun:id,nama', 'kartuKeluarga.rw:id,nomor', 'kartuKeluarga.rt:id,nomor', 'penduduk:id,nik,nama_lengkap,jenis_kelamin']);
         if ($module === 'kelahiran') $query->with(['penduduk:id,nik,nama_lengkap', 'kartuKeluarga:id,nomor_kk', 'ayah:id,nik,nama_lengkap', 'ibu:id,nik,nama_lengkap']);
         if ($module === 'kematian') $query->with('penduduk:id,nik,nama_lengkap');
-        if ($module === 'penduduk-datang') $query->with(['penduduk:id,nik,nama_lengkap', 'kartuKeluargaTujuan:id,nomor_kk,alamat,dusun_id,rw_id,rt_id', 'kartuKeluargaTujuan.anggotaKeluarga.penduduk:id,nik,nama_lengkap,jenis_kelamin', 'anggotaKedatangan.penduduk:id,nik,nama_lengkap,jenis_kelamin']);
-        if ($module === 'penduduk-pindah') $query->with(['penduduk:id,nik,nama_lengkap', 'kartuKeluargaTujuan:id,nomor_kk,alamat']);
+        if ($module === 'penduduk-datang') $query->with(['penduduk', 'kartuKeluargaTujuan:id,nomor_kk,alamat,dusun_id,rw_id,rt_id', 'kartuKeluargaTujuan.anggotaKeluarga.penduduk:id,nik,nama_lengkap,jenis_kelamin', 'anggotaKedatangan.penduduk']);
+        if ($module === 'penduduk-pindah') $query->with(['penduduk', 'kartuKeluargaTujuan:id,nomor_kk,alamat']);
         $item = $query->findOrFail((int) $id);
         return response()->json(['data' => $this->payload($module, $item)]);
     }
@@ -89,6 +89,9 @@ class PopulationController extends ApiController
         }
         $access = app(\App\Services\WilayahAccess::class);
         $data = $access->forUser($request->user(), fn () => $this->validated($request, $module));
+        if ($module === 'penduduk-pindah') {
+            $data['jenis_pindah'] = filled($data['kartu_keluarga_asal_id'] ?? null) ? 'keluarga' : 'individu';
+        }
 
         $item = $access->forUser($request->user(), fn () => match ($module) {
             'kelahiran' => app(KelahiranService::class)->store($data, $request->user()),
@@ -242,7 +245,7 @@ class PopulationController extends ApiController
 
     private function optionalPopulationFields(): array
     {
-        return ['penduduk_id' => ['nullable', 'integer'], 'kartu_keluarga_tujuan_id' => ['nullable', 'integer'], 'kartu_keluarga_asal_id' => ['nullable', 'integer'], 'nomor_surat_pindah' => ['nullable', 'string', 'max:255'], 'alamat_sebelumnya' => ['nullable', 'string'], 'desa_sebelumnya' => ['nullable', 'string', 'max:255'], 'kecamatan_sebelumnya' => ['nullable', 'string', 'max:255'], 'kabupaten_sebelumnya' => ['nullable', 'string', 'max:255'], 'provinsi_sebelumnya' => ['nullable', 'string', 'max:255'], 'alamat_tujuan' => ['nullable', 'string'], 'desa_tujuan' => ['nullable', 'string', 'max:255'], 'kecamatan_tujuan' => ['nullable', 'string', 'max:255'], 'kabupaten_tujuan' => ['nullable', 'string', 'max:255'], 'provinsi_tujuan' => ['nullable', 'string', 'max:255'], 'jenis_tujuan_kk' => ['nullable', 'in:gabung_kk,kk_baru'], 'hubungan_keluarga' => ['nullable', 'string', 'max:50'], 'status' => ['nullable', 'string', 'max:30'], 'alasan' => ['nullable', 'string', 'max:255'], 'catatan' => ['nullable', 'string'], 'penduduk' => ['nullable', 'array'], 'anggota' => ['nullable', 'array'], 'kk_baru' => ['nullable', 'array'], 'domisili_tujuan' => ['nullable', 'array']];
+        return ['penduduk_id' => ['nullable', 'integer'], 'kartu_keluarga_tujuan_id' => ['nullable', 'integer'], 'kartu_keluarga_asal_id' => ['nullable', 'integer'], 'jenis_pindah' => ['nullable', 'in:individu,keluarga'], 'tujuan_pindah' => ['nullable', 'in:dalam_desa,keluar_desa'], 'nomor_surat_pindah' => ['nullable', 'string', 'max:255'], 'alamat_sebelumnya' => ['nullable', 'string'], 'desa_sebelumnya' => ['nullable', 'string', 'max:255'], 'kecamatan_sebelumnya' => ['nullable', 'string', 'max:255'], 'kabupaten_sebelumnya' => ['nullable', 'string', 'max:255'], 'provinsi_sebelumnya' => ['nullable', 'string', 'max:255'], 'alamat_tujuan' => ['nullable', 'string'], 'desa_tujuan' => ['nullable', 'string', 'max:255'], 'kecamatan_tujuan' => ['nullable', 'string', 'max:255'], 'kabupaten_tujuan' => ['nullable', 'string', 'max:255'], 'provinsi_tujuan' => ['nullable', 'string', 'max:255'], 'jenis_tujuan_kk' => ['nullable', 'in:gabung_kk,kk_baru'], 'hubungan_keluarga' => ['nullable', 'string', 'max:50'], 'status' => ['nullable', 'string', 'max:30'], 'alasan' => ['nullable', 'string', 'max:255'], 'catatan' => ['nullable', 'string'], 'penduduk' => ['nullable', 'array'], 'anggota' => ['nullable', 'array'], 'kk_baru' => ['nullable', 'array'], 'domisili_tujuan' => ['nullable', 'array']];
     }
 
     private function storeKartuKeluarga(array $data): KartuKeluarga
@@ -286,7 +289,7 @@ class PopulationController extends ApiController
             'kelahiran' => ['id' => $item->id, 'penduduk_id' => $item->penduduk_id, 'kartu_keluarga_id' => $item->kartu_keluarga_id, 'ayah_id' => $item->ayah_id, 'ibu_id' => $item->ibu_id, 'penduduk' => $item->penduduk?->only(['id', 'nik', 'nama_lengkap']), 'kartu_keluarga' => $item->kartuKeluarga?->only(['id', 'nomor_kk']), 'ayah' => $item->ayah?->only(['id', 'nik', 'nama_lengkap']), 'ibu' => $item->ibu?->only(['id', 'nik', 'nama_lengkap']), 'nama_lengkap' => $item->penduduk?->nama_lengkap, 'nik' => $item->penduduk?->nik, 'jenis_kelamin' => $item->penduduk?->jenis_kelamin, 'tempat_lahir' => $item->tempat_lahir, 'tanggal_lahir' => $item->tanggal_lahir?->toDateString(), 'waktu_lahir' => $item->waktu_lahir, 'nomor_akta_kelahiran' => $item->nomor_akta_kelahiran, 'tanggal_akta_kelahiran' => $item->tanggal_akta_kelahiran?->toDateString(), 'anak_ke' => $item->anak_ke, 'berat_lahir' => $item->berat_lahir, 'panjang_lahir' => $item->panjang_lahir, 'tanggal_dilaporkan' => $item->tanggal_dilaporkan?->toDateString(), 'catatan' => $item->catatan],
             'kematian' => ['id' => $item->id, 'penduduk_id' => $item->penduduk_id, 'penduduk' => $item->penduduk?->only(['id', 'nik', 'nama_lengkap']), 'tanggal_meninggal' => $item->tanggal_meninggal?->toDateString(), 'waktu_meninggal' => $item->waktu_meninggal, 'tempat_meninggal' => $item->tempat_meninggal, 'penyebab_meninggal' => $item->penyebab_meninggal, 'nomor_surat_kematian' => $item->nomor_surat_kematian, 'tanggal_dilaporkan' => $item->tanggal_dilaporkan?->toDateString(), 'catatan' => $item->catatan],
             'penduduk-datang' => $this->arrivalPayload($item),
-            'penduduk-pindah' => ['id' => $item->id, 'penduduk_id' => $item->penduduk_id, 'penduduk' => $item->penduduk?->only(['id', 'nik', 'nama_lengkap']), 'jenis_pindah' => $item->jenis_pindah, 'jenis_tujuan_kk' => $item->jenis_tujuan_kk, 'kartu_keluarga_tujuan_id' => $item->kartu_keluarga_tujuan_id, 'kartu_keluarga_tujuan' => $item->kartuKeluargaTujuan?->only(['id', 'nomor_kk', 'alamat']), 'tanggal_pindah' => $item->tanggal_pindah?->toDateString(), 'alamat_tujuan' => $item->alamat_tujuan, 'desa_tujuan' => $item->desa_tujuan, 'kabupaten_tujuan' => $item->kabupaten_tujuan, 'status' => $item->status, 'catatan' => $item->catatan],
+            'penduduk-pindah' => ['id' => $item->id, 'penduduk_id' => $item->penduduk_id, 'penduduk' => $this->personPayload($item->penduduk), 'jenis_tujuan_kk' => $item->jenis_tujuan_kk, 'kartu_keluarga_tujuan_id' => $item->kartu_keluarga_tujuan_id, 'kartu_keluarga_tujuan' => $item->kartuKeluargaTujuan?->only(['id', 'nomor_kk', 'alamat']), 'tanggal_pindah' => $item->tanggal_pindah?->toDateString(), 'alamat_tujuan' => $item->alamat_tujuan, 'desa_tujuan' => $item->desa_tujuan, 'kabupaten_tujuan' => $item->kabupaten_tujuan, 'status' => $item->status, 'catatan' => $item->catatan],
             default => array_merge(['id' => $item->id], collect($item->toArray())->except(['updated_at'])->all()),
         };
     }
@@ -296,6 +299,23 @@ class PopulationController extends ApiController
         $members = $item->anggotaKedatangan ?? collect();
         $first = $members->first();
         $person = $item->penduduk ?? $first?->penduduk;
-        return ['id' => $item->id, 'jenis_kedatangan' => $item->jenis_kedatangan, 'tanggal_datang' => $item->tanggal_datang?->toDateString(), 'penduduk_id' => $item->penduduk_id ?? $first?->penduduk_id, 'penduduk' => $person ? collect($person->toArray())->only(['id', 'nik', 'nama_lengkap', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama', 'golongan_darah', 'status_perkawinan', 'pendidikan_id', 'pekerjaan_id', 'kewarganegaraan', 'nama_ayah', 'nama_ibu', 'telepon', 'alamat', 'dusun_id', 'rw_id', 'rt_id'])->all() : null, 'kartu_keluarga_tujuan_id' => $item->kartu_keluarga_tujuan_id, 'kartu_keluarga_tujuan' => $item->kartuKeluargaTujuan?->only(['id', 'nomor_kk', 'alamat', 'dusun_id', 'rw_id', 'rt_id']), 'anggota' => $members->map(fn ($member) => ['id' => $member->id, 'penduduk_id' => $member->penduduk_id, 'hubungan_keluarga' => $member->hubungan_keluarga, 'penduduk' => $member->penduduk?->only(['id', 'nik', 'nama_lengkap', 'jenis_kelamin'])])->values()->all(), 'anggota_kk' => $item->kartuKeluargaTujuan?->anggotaKeluarga?->map(fn ($member) => ['id' => $member->id, 'penduduk_id' => $member->penduduk_id, 'hubungan_keluarga' => $member->hubungan_keluarga, 'aktif' => $member->aktif, 'penduduk' => $member->penduduk?->only(['id', 'nik', 'nama_lengkap', 'jenis_kelamin'])])->values()->all() ?? [], 'jenis_tujuan_kk' => $item->jenis_tujuan_kk, 'nomor_surat_pindah' => $item->nomor_surat_pindah, 'alamat_sebelumnya' => $item->alamat_sebelumnya, 'desa_sebelumnya' => $item->desa_sebelumnya, 'kecamatan_sebelumnya' => $item->kecamatan_sebelumnya, 'kabupaten_sebelumnya' => $item->kabupaten_sebelumnya, 'provinsi_sebelumnya' => $item->provinsi_sebelumnya, 'status' => $item->status, 'catatan' => $item->catatan];
+        return ['id' => $item->id, 'jenis_kedatangan' => $item->jenis_kedatangan, 'tanggal_datang' => $item->tanggal_datang?->toDateString(), 'penduduk_id' => $item->penduduk_id ?? $first?->penduduk_id, 'penduduk' => $this->personPayload($person), 'kartu_keluarga_tujuan_id' => $item->kartu_keluarga_tujuan_id, 'kartu_keluarga_tujuan' => $item->kartuKeluargaTujuan?->only(['id', 'nomor_kk', 'alamat', 'dusun_id', 'rw_id', 'rt_id']), 'anggota' => $members->map(fn ($member) => ['id' => $member->id, 'penduduk_id' => $member->penduduk_id, 'hubungan_keluarga' => $member->hubungan_keluarga, 'penduduk' => $this->personPayload($member->penduduk)])->values()->all(), 'anggota_kk' => $item->kartuKeluargaTujuan?->anggotaKeluarga?->map(fn ($member) => ['id' => $member->id, 'penduduk_id' => $member->penduduk_id, 'hubungan_keluarga' => $member->hubungan_keluarga, 'aktif' => $member->aktif, 'penduduk' => $member->penduduk?->only(['id', 'nik', 'nama_lengkap', 'jenis_kelamin'])])->values()->all() ?? [], 'jenis_tujuan_kk' => $item->jenis_tujuan_kk, 'nomor_surat_pindah' => $item->nomor_surat_pindah, 'alamat_sebelumnya' => $item->alamat_sebelumnya, 'desa_sebelumnya' => $item->desa_sebelumnya, 'kecamatan_sebelumnya' => $item->kecamatan_sebelumnya, 'kabupaten_sebelumnya' => $item->kabupaten_sebelumnya, 'provinsi_sebelumnya' => $item->provinsi_sebelumnya, 'status' => $item->status, 'catatan' => $item->catatan];
+    }
+
+    private function personPayload(?Penduduk $person): ?array
+    {
+        if (! $person) return null;
+
+        return [
+            'id' => $person->id, 'nik' => $person->nik, 'nama_lengkap' => $person->nama_lengkap,
+            'tempat_lahir' => $person->tempat_lahir, 'tanggal_lahir' => $person->tanggal_lahir?->toDateString(),
+            'jenis_kelamin' => $person->jenis_kelamin, 'agama' => $person->agama,
+            'golongan_darah' => $person->golongan_darah, 'status_perkawinan' => $person->status_perkawinan,
+            'pendidikan_id' => $person->pendidikan_id, 'pekerjaan_id' => $person->pekerjaan_id,
+            'kewarganegaraan' => $person->kewarganegaraan, 'nama_ayah' => $person->nama_ayah,
+            'nama_ibu' => $person->nama_ibu, 'telepon' => $person->telepon, 'alamat' => $person->alamat,
+            'dusun_id' => $person->dusun_id, 'rw_id' => $person->rw_id, 'rt_id' => $person->rt_id,
+            'status_penduduk' => $person->status_penduduk, 'masih_hidup' => $person->masih_hidup,
+        ];
     }
 }

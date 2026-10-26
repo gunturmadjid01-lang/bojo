@@ -46,7 +46,6 @@ class PendudukPindahService
 
                 PendudukPindah::query()->create([
                     'penduduk_id' => $penduduk->id,
-                    'jenis_pindah' => $jenisPindah,
                     'jenis_tujuan_kk' => $payload['jenis_tujuan_kk'] ?? 'gabung_kk',
                     'kartu_keluarga_tujuan_id' => $targetKkId,
                     'hubungan_keluarga' => $member['hubungan_keluarga'] ?? 'Anggota',
@@ -96,13 +95,12 @@ class PendudukPindahService
             }
 
             $header = PerpindahanPenduduk::create([
-                'jenis_pindah' => $type,
                 'tujuan_pindah' => $destination,
                 'tanggal_pindah' => $date,
                 'nomor_surat_pindah' => $payload['nomor_surat_pindah'] ?? null,
                 'alasan' => $payload['alasan'] ?? null,
                 'kartu_keluarga_asal_id' => $originKk?->id,
-                'jenis_tujuan_kk' => $payload['jenis_tujuan_kk'] ?? null,
+                'jenis_tujuan_kk' => $payload['jenis_tujuan_kk'] ?? 'gabung_kk',
                 'kartu_keluarga_tujuan_id' => $targetKk?->id,
                 'alamat_tujuan' => $payload['alamat_tujuan'] ?? $payload['kk_baru']['alamat'] ?? null,
                 'desa_tujuan' => $payload['desa_tujuan'] ?? null,
@@ -153,8 +151,7 @@ class PendudukPindahService
                 // Keep the old table populated as a backward-compatible event projection.
                 PendudukPindah::create([
                     'penduduk_id' => $member->id,
-                    'jenis_pindah' => $type,
-                    'jenis_tujuan_kk' => $payload['jenis_tujuan_kk'] ?? null,
+                    'jenis_tujuan_kk' => $payload['jenis_tujuan_kk'] ?? 'gabung_kk',
                     'kartu_keluarga_tujuan_id' => $targetKk?->id,
                     'hubungan_keluarga' => $payload['hubungan_keluarga'] ?? null,
                     'tanggal_pindah' => $date,

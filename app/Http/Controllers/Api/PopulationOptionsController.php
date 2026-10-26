@@ -19,7 +19,7 @@ class PopulationOptionsController extends ApiController
             'rts' => RT::query()->orderBy('nomor')->get(['id', 'rw_id', 'nomor']),
             'pendidikans' => Pendidikan::query()->orderBy('nama')->get(['id', 'kode', 'nama']),
             'pekerjaans' => Pekerjaan::query()->orderBy('nama')->get(['id', 'kode', 'nama']),
-            'penduduk' => Penduduk::query()->with(['dusun:id,nama', 'rw:id,nomor', 'rt:id,nomor', 'anggotaKartuKeluarga' => fn ($query) => $query->where('aktif', true)->with('kartuKeluarga:id,nomor_kk,alamat')])->orderBy('nama_lengkap')->get(['id', 'nik', 'nama_lengkap', 'jenis_kelamin', 'tanggal_lahir', 'status_penduduk', 'masih_hidup', 'alamat', 'dusun_id', 'rw_id', 'rt_id']),
+            'penduduk' => Penduduk::query()->with(['dusun:id,nama', 'rw:id,nomor', 'rt:id,nomor', 'anggotaKartuKeluarga' => fn ($query) => $query->where('aktif', true)->with('kartuKeluarga:id,nomor_kk,alamat')])->orderBy('nama_lengkap')->get(['id', 'nik', 'nama_lengkap', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama', 'golongan_darah', 'status_perkawinan', 'pendidikan_id', 'pekerjaan_id', 'kewarganegaraan', 'nama_ayah', 'nama_ibu', 'telepon', 'status_penduduk', 'masih_hidup', 'alamat', 'dusun_id', 'rw_id', 'rt_id']),
             'kartuKeluargas' => KartuKeluarga::query()->where('status', 'aktif')->with(['desa:id,nama_desa', 'dusun:id,nama', 'rw:id,nomor', 'rt:id,nomor', 'anggotaKeluarga' => fn ($query) => $query->where('aktif', true)->with('penduduk:id,nik,nama_lengkap,jenis_kelamin')])->orderBy('nomor_kk')->get(['id', 'nomor_kk', 'desa_id', 'dusun_id', 'rw_id', 'rt_id', 'alamat', 'status']),
         ]);
     }

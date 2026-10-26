@@ -11,7 +11,6 @@ class PendudukPindah extends Model
 
     protected $fillable = [
         'penduduk_id',
-        'jenis_pindah',
         'jenis_tujuan_kk',
         'kartu_keluarga_tujuan_id',
         'hubungan_keluarga',

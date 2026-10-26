@@ -11,7 +11,7 @@ class PerpindahanPenduduk extends Model
     use \App\Models\Concerns\HasWilayahScope;
     protected $table = 'perpindahan_penduduks';
 
-    protected $fillable = ['kode_perpindahan', 'jenis_pindah', 'tujuan_pindah', 'tanggal_pindah', 'nomor_surat_pindah', 'alasan', 'kartu_keluarga_asal_id', 'jenis_tujuan_kk', 'kartu_keluarga_tujuan_id', 'alamat_tujuan', 'desa_tujuan', 'kecamatan_tujuan', 'kabupaten_tujuan', 'provinsi_tujuan', 'status', 'catatan', 'dibuat_oleh'];
+    protected $fillable = ['kode_perpindahan', 'tujuan_pindah', 'tanggal_pindah', 'nomor_surat_pindah', 'alasan', 'kartu_keluarga_asal_id', 'jenis_tujuan_kk', 'kartu_keluarga_tujuan_id', 'alamat_tujuan', 'desa_tujuan', 'kecamatan_tujuan', 'kabupaten_tujuan', 'provinsi_tujuan', 'status', 'catatan', 'dibuat_oleh'];
 
     protected function casts(): array
     {
