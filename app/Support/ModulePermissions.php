@@ -53,9 +53,16 @@ class ModulePermissions
             true,
         ))) return true;
         if (!isset(self::MODULES[$module])) return false;
-        $permissions = self::permissionNames($module, $action);
+        $permissions = self::permissionNames($module, $action)->all();
 
-        return $user->getAllPermissions()->pluck('name')->map('strtolower')->intersect($permissions)->isNotEmpty();
+        // Baca relasi terbaru langsung dari database. Matriks permission dapat
+        // diubah ketika token Android masih aktif, sehingga koleksi relasi atau
+        // cache Spatie pada instance user tidak boleh menentukan hasil akses.
+        return $user->permissions()->whereIn('name', $permissions)->exists()
+            || $user->roles()->whereHas(
+                'permissions',
+                fn ($query) => $query->whereIn('name', $permissions),
+            )->exists();
     }
 
     public static function permissionNames(string $module, string $action): \Illuminate\Support\Collection
@@ -90,7 +97,6 @@ class ModulePermissions
         return collect(array_keys(self::MODULES))
             ->flatMap(fn (string $module) => collect(['view', 'create', 'edit', 'delete'])
                 ->flatMap(fn (string $action) => self::permissionNames($module, $action)))
-            ->concat(self::LEGACY_ASSIGNMENT_PERMISSIONS)
             ->unique()
             ->values();
     }

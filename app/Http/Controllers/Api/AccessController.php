@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class AccessController extends ApiController
 {
@@ -104,6 +105,7 @@ class AccessController extends ApiController
             fn (string $name): bool => ! ModulePermissions::managedPermissionNames()->contains(strtolower($name)),
         )->all();
         $role->syncPermissions(array_merge($retained, $selected));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         return response()->json(['message' => 'Permission berhasil diperbarui.']);
     }
 

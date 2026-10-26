@@ -8,6 +8,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class PermissionMatrixController extends Controller
 {
@@ -115,6 +116,7 @@ class PermissionMatrixController extends Controller
             fn (string $name): bool => ! \App\Support\ModulePermissions::managedPermissionNames()->contains(strtolower($name)),
         )->all();
         $role->syncPermissions(array_merge($retained, $selectedPermissionNames));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return to_route('permissions.index')->with('success', 'Permission berhasil diperbarui.');
     }
