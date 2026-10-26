@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class PendudukPindah extends Model
 {
@@ -42,5 +43,17 @@ class PendudukPindah extends Model
     public function kartuKeluargaTujuan(): BelongsTo
     {
         return $this->belongsTo(KartuKeluarga::class, 'kartu_keluarga_tujuan_id');
+    }
+
+    public function kartuKeluargaAsal(): HasOneThrough
+    {
+        return $this->hasOneThrough(
+            KartuKeluarga::class,
+            AnggotaKartuKeluarga::class,
+            'penduduk_id',
+            'id',
+            'penduduk_id',
+            'kartu_keluarga_id',
+        )->where('anggota_kartu_keluargas.aktif', true);
     }
 }
