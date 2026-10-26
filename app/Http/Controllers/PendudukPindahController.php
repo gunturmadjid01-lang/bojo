@@ -43,7 +43,7 @@ class PendudukPindahController extends Controller
                     'created_at',
                 ]),
             'perpindahans' => PerpindahanPenduduk::query()
-                ->with(['kartuKeluargaAsal:id,nomor_kk,dusun_id,rw_id,rt_id,alamat', 'kartuKeluargaTujuan:id,nomor_kk,dusun_id,rw_id,rt_id,alamat', 'anggotaPerpindahan.penduduk:id,nik,nama_lengkap'])
+                ->with(['kartuKeluargaAsal', 'kartuKeluargaTujuan:id,nomor_kk,dusun_id,rw_id,rt_id,alamat', 'anggotaPerpindahan.penduduk:id,nik,nama_lengkap'])
                 ->latest()
                 ->get(),
             ...app(\App\Services\StatistikKependudukanService::class)->indexPayload('penduduk-pindah', $request),

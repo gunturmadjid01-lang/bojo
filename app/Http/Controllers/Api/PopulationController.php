@@ -41,7 +41,7 @@ class PopulationController extends ApiController
         } elseif ($module === 'penduduk-datang') {
             $query->with(['penduduk', 'kartuKeluargaTujuan:id,nomor_kk,alamat,dusun_id,rw_id,rt_id', 'kartuKeluargaTujuan.anggotaKeluarga.penduduk:id,nik,nama_lengkap,jenis_kelamin', 'anggotaKedatangan.penduduk']);
         } else {
-            $query->with(['penduduk', 'kartuKeluargaAsal:id,nomor_kk', 'kartuKeluargaTujuan:id,nomor_kk']);
+            $query->with(['penduduk', 'kartuKeluargaTujuan:id,nomor_kk']);
         }
         $this->applyFilters($request, $query, $module);
 

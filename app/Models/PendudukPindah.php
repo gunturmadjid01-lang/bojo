@@ -54,6 +54,7 @@ class PendudukPindah extends Model
             'id',
             'penduduk_id',
             'kartu_keluarga_id',
-        )->where('anggota_kartu_keluargas.aktif', true);
+        )->where('anggota_kartu_keluargas.aktif', true)
+            ->select('kartu_keluargas.*');
     }
 }
