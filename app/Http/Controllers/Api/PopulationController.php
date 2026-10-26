@@ -87,6 +87,48 @@ class PopulationController extends ApiController
             });
             return response()->json(['data' => $this->payload($module, $item)], 201);
         }
+        if ($module === 'penduduk' && $request->has('penduduks')) {
+            $data = $this->validated($request, 'penduduk');
+            $extra = $request->validate([
+                'penduduks' => ['array'], 'penduduks.*.nik' => ['required', 'string', 'max:16', 'distinct', 'unique:penduduks,nik'],
+                'penduduks.*.nama_lengkap' => ['required', 'string', 'max:255'], 'penduduks.*.jenis_kelamin' => ['required', 'in:Laki-laki,Perempuan'],
+                'penduduks.*.hubungan_keluarga' => ['required', 'string', 'max:50', 'not_in:Kepala Keluarga'],
+                'penduduks.*.pendidikan_id' => ['nullable', 'exists:pendidikans,id'], 'penduduks.*.pekerjaan_id' => ['nullable', 'exists:pekerjaans,id'],
+                'kartu_keluarga_id' => ['nullable', 'integer', new \App\Rules\WilayahExists(KartuKeluarga::class)], 'nomor_kk' => ['nullable', 'string', 'max:16', 'unique:kartu_keluargas,nomor_kk'], 'tanggal_diterbitkan' => ['nullable', 'date'],
+                'hubungan_keluarga_utama' => ['nullable', 'string', 'max:50'],
+            ]);
+            if (empty($extra['kartu_keluarga_id']) && empty($extra['nomor_kk'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['kartu_keluarga_id' => 'Pilih KK terdaftar atau isi Nomor KK baru.']);
+            }
+            if (empty($extra['kartu_keluarga_id']) && empty($data['dusun_id'])) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['dusun_id' => 'Dusun wajib diisi untuk KK baru.']);
+            }
+            if (!empty($extra['kartu_keluarga_id']) && ($extra['hubungan_keluarga_utama'] ?? null) === 'Kepala Keluarga') {
+                throw \Illuminate\Validation\ValidationException::withMessages(['hubungan_keluarga_utama' => 'KK ini sudah memiliki Kepala Keluarga.']);
+            }
+            $item = DB::transaction(function () use ($data, $extra): Penduduk {
+                $head = Penduduk::create($data);
+                $kk = null;
+                $kk = !empty($extra['kartu_keluarga_id']) ? KartuKeluarga::query()->findOrFail($extra['kartu_keluarga_id']) : null;
+                if ($kk) {
+                    $head->update(['alamat' => $kk->alamat, 'dusun_id' => $kk->dusun_id, 'rw_id' => $kk->rw_id, 'rt_id' => $kk->rt_id]);
+                    AnggotaKartuKeluarga::create(['kartu_keluarga_id' => $kk->id, 'penduduk_id' => $head->id, 'hubungan_keluarga' => $extra['hubungan_keluarga_utama'] ?? 'Anggota', 'tanggal_masuk' => now()->toDateString(), 'aktif' => true]);
+                }
+                if (!$kk && !empty($extra['nomor_kk'])) {
+                    $dusun = AppModelsDusun::findOrFail($data['dusun_id']);
+                    $kk = KartuKeluarga::create(['nomor_kk' => $extra['nomor_kk'], 'desa_id' => $dusun->desa_id, 'dusun_id' => $data['dusun_id'], 'rw_id' => $data['rw_id'] ?? null, 'rt_id' => $data['rt_id'] ?? null, 'alamat' => $data['alamat'] ?? '-', 'tanggal_diterbitkan' => $extra['tanggal_diterbitkan'] ?? null, 'status' => 'aktif']);
+                    AnggotaKartuKeluarga::create(['kartu_keluarga_id' => $kk->id, 'penduduk_id' => $head->id, 'hubungan_keluarga' => $extra['hubungan_keluarga_utama'] ?? 'Kepala Keluarga', 'tanggal_masuk' => now()->toDateString(), 'aktif' => true]);
+                }
+                foreach ($extra['penduduks'] ?? [] as $member) {
+                    $relation = $member['hubungan_keluarga']; unset($member['hubungan_keluarga']);
+                    $member = array_merge(['kewarganegaraan' => 'WNI', 'status_penduduk' => 'aktif', 'masih_hidup' => true], $member, collect($data)->only(['alamat', 'dusun_id', 'rw_id', 'rt_id'])->all());
+                    $person = Penduduk::create($member);
+                    if ($kk) AnggotaKartuKeluarga::create(['kartu_keluarga_id' => $kk->id, 'penduduk_id' => $person->id, 'hubungan_keluarga' => $relation, 'tanggal_masuk' => now()->toDateString(), 'aktif' => true]);
+                }
+                return $head;
+            });
+            return response()->json(['data' => $this->payload('penduduk', $item->fresh())], 201);
+        }
         $access = app(\App\Services\WilayahAccess::class);
         $data = $access->forUser($request->user(), fn () => $this->validated($request, $module));
         if ($module === 'penduduk-pindah') {
