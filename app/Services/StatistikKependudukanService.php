@@ -63,8 +63,9 @@ class StatistikKependudukanService
                 // ['label' => 'Total Anggota KK Aktif', 'value' => (clone $activeMembers)->whereHas('kartuKeluarga', fn ($q) => $q->where('status', 'aktif'))->count()],
                 ['label' => 'KK Baru Tahun Ini', 'value' => (clone $active)->whereYear('tanggal_diterbitkan', $year)->count()],
             ],
-            'monthly' => $this->monthly((clone $active), 'tanggal_diterbitkan', $year),
-            'monthlyTitle' => 'KK Baru per Bulan',
+            'monthly' => [],
+            'monthlyTitle' => null,
+            'showMonthlyChart' => false,
             'regionTitle' => $this->regionTitle('Jumlah Kartu Keluarga'),
             'regionValues' => $this->regionValues((clone $active), 'kartu_keluargas'),
         ];
