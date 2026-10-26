@@ -48,7 +48,7 @@ class PopulationController extends ApiController
         return response()->json($query->paginate($this->perPage($request))->through(fn ($item) => $this->payload($module, $item)));
     }
 
-    public function show(Request $request, string $module, string $id): JsonResponse
+    public function show(Request $request, string $id, string $module): JsonResponse
     {
         $this->authorizeModule($request, $module);
         $query = $this->model($module)::query();
@@ -103,7 +103,7 @@ class PopulationController extends ApiController
         return response()->json(['data' => $this->payload($module, $item)], 201);
     }
 
-    public function update(Request $request, string $module, string $id): JsonResponse
+    public function update(Request $request, string $id, string $module): JsonResponse
     {
         $this->authorizeModule($request, $module, 'edit');
         return app(\App\Services\WilayahAccess::class)->forUser($request->user(), function () use ($request, $module, $id): JsonResponse {
@@ -132,7 +132,7 @@ class PopulationController extends ApiController
         });
     }
 
-    public function destroy(Request $request, string $module, string $id): JsonResponse
+    public function destroy(Request $request, string $id, string $module): JsonResponse
     {
         $this->authorizeModule($request, $module, 'delete');
         $item = $this->model($module)::query()->findOrFail((int) $id);
