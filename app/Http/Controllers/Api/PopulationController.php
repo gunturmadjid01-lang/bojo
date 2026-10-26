@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\{AnggotaKartuKeluarga, KartuKeluarga, KedatanganPenduduk, Kelahiran, Kematian, Penduduk, PendudukPindah, PerpindahanPenduduk};
+use App\Models\{AnggotaKartuKeluarga, Dusun, KartuKeluarga, KedatanganPenduduk, Kelahiran, Kematian, Penduduk, PendudukPindah, PerpindahanPenduduk};
 use App\Services\{KelahiranService, KematianService};
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -115,7 +115,7 @@ class PopulationController extends ApiController
                     AnggotaKartuKeluarga::create(['kartu_keluarga_id' => $kk->id, 'penduduk_id' => $head->id, 'hubungan_keluarga' => $extra['hubungan_keluarga_utama'] ?? 'Anggota', 'tanggal_masuk' => now()->toDateString(), 'aktif' => true]);
                 }
                 if (!$kk && !empty($extra['nomor_kk'])) {
-                    $dusun = AppModelsDusun::findOrFail($data['dusun_id']);
+                    $dusun = Dusun::findOrFail($data['dusun_id']);
                     $kk = KartuKeluarga::create(['nomor_kk' => $extra['nomor_kk'], 'desa_id' => $dusun->desa_id, 'dusun_id' => $data['dusun_id'], 'rw_id' => $data['rw_id'] ?? null, 'rt_id' => $data['rt_id'] ?? null, 'alamat' => $data['alamat'] ?? '-', 'tanggal_diterbitkan' => $extra['tanggal_diterbitkan'] ?? null, 'status' => 'aktif']);
                     AnggotaKartuKeluarga::create(['kartu_keluarga_id' => $kk->id, 'penduduk_id' => $head->id, 'hubungan_keluarga' => $extra['hubungan_keluarga_utama'] ?? 'Kepala Keluarga', 'tanggal_masuk' => now()->toDateString(), 'aktif' => true]);
                 }
