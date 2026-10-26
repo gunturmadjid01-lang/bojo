@@ -46,7 +46,6 @@ export default function PendudukShow({ penduduk }) {
                         <div><p className="text-xs uppercase tracking-wide text-slate-400">Masih Hidup</p><p className="mt-1 font-medium text-slate-800">{penduduk.masih_hidup ? 'Ya' : 'Tidak'}</p></div>
                         <div className="md:col-span-2"><p className="text-xs uppercase tracking-wide text-slate-400">Alamat</p><p className="mt-1 font-medium text-slate-800">{penduduk.alamat || '-'}</p></div>
                         <div><p className="text-xs uppercase tracking-wide text-slate-400">Telepon</p><p className="mt-1 font-medium text-slate-800">{penduduk.telepon || '-'}</p></div>
-                        <div><p className="text-xs uppercase tracking-wide text-slate-400">Email</p><p className="mt-1 font-medium text-slate-800">{penduduk.email || '-'}</p></div>
                     </div>
                 </div>
             </section>

@@ -113,7 +113,7 @@ export default function PopulationStatistics({ statistics, years = [], selectedY
             </div>
 
             {showCharts && <div className="grid gap-5 xl:grid-cols-2">
-                <Card className="border-slate-200 shadow-sm">
+                {statistics.showMonthlyChart !== false && <Card className="border-slate-200 shadow-sm">
                     <CardHeader className="p-4 pb-2"><CardTitle className="flex items-center gap-2 text-base text-slate-800"><BarChart3 className="size-4 text-cyan-600" />{statistics.monthlyTitle}</CardTitle>{statistics.monthlySubtitle && <p className="text-xs text-slate-500">{statistics.monthlySubtitle}</p>}</CardHeader>
                     <CardContent className="h-72 p-4 pt-2">
                         <ResponsiveContainer width="100%" height="100%">
@@ -126,7 +126,7 @@ export default function PopulationStatistics({ statistics, years = [], selectedY
                             </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
-                </Card>
+                </Card>}
 
                 <Card className="border-slate-200 shadow-sm">
                     <CardHeader className="p-4 pb-2"><CardTitle className="flex items-center gap-2 text-base text-slate-800"><BarChart3 className="size-4 text-cyan-600" />{statistics.regionTitle}</CardTitle></CardHeader>

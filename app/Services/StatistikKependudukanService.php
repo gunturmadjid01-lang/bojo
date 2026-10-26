@@ -36,23 +36,7 @@ class StatistikKependudukanService
 
     public function years(): array
     {
-        return app(WilayahAccess::class)->forUser(app(WilayahAccess::class)->user(), function (): array {
-            $years = collect([now()->year]);
-            foreach ([
-                [KartuKeluarga::class, 'tanggal_diterbitkan'],
-                [AnggotaKartuKeluarga::class, 'tanggal_masuk'],
-                [Penduduk::class, 'created_at'],
-                [Kelahiran::class, 'tanggal_lahir'],
-                [Kematian::class, 'tanggal_meninggal'],
-                [KedatanganPenduduk::class, 'tanggal_datang'],
-                [PendudukPindah::class, 'tanggal_pindah'],
-                [PerpindahanPenduduk::class, 'tanggal_pindah'],
-            ] as [$model, $column]) {
-                $years = $years->merge($model::query()->whereNotNull($column)->pluck($column)->map(fn ($date) => Carbon::parse($date)->year));
-            }
-
-            return $years->unique()->sortDesc()->values()->all();
-        });
+        return [now()->year, now()->year - 1];
     }
 
     public function indexPayload(string $module, Request $request): array
@@ -93,23 +77,28 @@ class StatistikKependudukanService
         $active = Penduduk::query()->where('status_penduduk', 'aktif')->where('masih_hidup', true);
         $productive = $this->ageQuery(clone $active, 15, 64);
         $elderly = (clone $active)->whereDate('tanggal_lahir', '<=', today()->subYears(60));
-        $movedOut = PendudukPindah::query()->whereYear('tanggal_pindah', $year)->where('jenis_tujuan_kk', '!=', 'gabung_kk');
+        $movedOut = PerpindahanPenduduk::query()->exists()
+            ? AnggotaPerpindahan::query()->whereHas('perpindahan', fn ($query) => $query->whereYear('tanggal_pindah', $year))
+            : PendudukPindah::query()->whereYear('tanggal_pindah', $year)->where('jenis_tujuan_kk', '!=', 'gabung_kk');
         $died = Kematian::query()->whereYear('tanggal_meninggal', $year);
+        $arrived = AnggotaKedatangan::query()->whereHas('kedatanganPenduduk', fn ($query) => $query->whereYear('tanggal_datang', $year));
+        $born = Kelahiran::query()->whereYear('tanggal_lahir', $year);
 
         return [
             'cards' => [
                 ['label' => 'Total Penduduk Aktif', 'value' => (clone $active)->count()],
                 ['label' => 'Laki-laki', 'value' => (clone $active)->where('jenis_kelamin', 'Laki-laki')->count()],
                 ['label' => 'Perempuan', 'value' => (clone $active)->where('jenis_kelamin', 'Perempuan')->count()],
-                ['label' => 'Penduduk Terdaftar Tahun Ini', 'value' => (clone $active)->whereYear('created_at', $year)->count()],
-                ['label' => 'Penduduk Keluar Tahun Ini', 'value' => (clone $movedOut)->count()],
-                ['label' => 'Penduduk Meninggal Tahun Ini', 'value' => (clone $died)->count()],
+                ['label' => "Penduduk Masuk Tahun {$year}", 'value' => (clone $arrived)->count()],
+                ['label' => "Penduduk Keluar Tahun {$year}", 'value' => (clone $movedOut)->count()],
+                ['label' => "Kelahiran Tahun {$year}", 'value' => (clone $born)->count()],
+                ['label' => "Kematian Tahun {$year}", 'value' => (clone $died)->count()],
                 ['label' => 'Usia Produktif (15-64)', 'value' => $productive->count()],
                 ['label' => 'Lansia (60+)', 'value' => $elderly->count()],
             ],
-            'monthly' => $this->monthly((clone $active), 'created_at', $year),
-            'monthlyTitle' => 'Penduduk Terdaftar per Bulan',
-            'monthlySubtitle' => 'Tahun '.$year,
+            'monthly' => [],
+            'monthlyTitle' => null,
+            'showMonthlyChart' => false,
             'regionTitle' => 'Jumlah Penduduk per Dusun',
             'regionValues' => $this->pendudukPerDusun(),
             'demographics' => [
@@ -237,7 +226,7 @@ class StatistikKependudukanService
 
         return [
             'cards' => [
-                ['label' => 'Total Kelahiran Tahun Ini', 'value' => (clone $yearQuery)->count()],
+                ['label' => "Total Kelahiran Tahun {$year}", 'value' => (clone $yearQuery)->count()],
                 ['label' => 'Kelahiran Bulan Ini', 'value' => (clone $yearQuery)->whereMonth('tanggal_lahir', now()->month)->count()],
                 ['label' => 'Bayi Laki-laki', 'value' => (clone $yearQuery)->whereHas('penduduk', fn ($q) => $q->where('jenis_kelamin', 'Laki-laki'))->count()],
                 ['label' => 'Bayi Perempuan', 'value' => (clone $yearQuery)->whereHas('penduduk', fn ($q) => $q->where('jenis_kelamin', 'Perempuan'))->count()],
@@ -258,7 +247,7 @@ class StatistikKependudukanService
 
         return [
             'cards' => [
-                ['label' => 'Total Kematian Tahun Ini', 'value' => (clone $yearQuery)->count()],
+                ['label' => "Total Kematian Tahun {$year}", 'value' => (clone $yearQuery)->count()],
                 ['label' => 'Kematian Bulan Ini', 'value' => (clone $yearQuery)->whereMonth('tanggal_meninggal', now()->month)->count()],
                 ['label' => 'Laki-laki', 'value' => (clone $yearQuery)->whereHas('penduduk', fn ($q) => $q->where('jenis_kelamin', 'Laki-laki'))->count()],
                 ['label' => 'Perempuan', 'value' => (clone $yearQuery)->whereHas('penduduk', fn ($q) => $q->where('jenis_kelamin', 'Perempuan'))->count()],
@@ -280,11 +269,11 @@ class StatistikKependudukanService
 
         return [
             'cards' => [
-                ['label' => 'Penduduk Masuk Tahun Ini', 'value' => (clone $members)->count()],
+                ['label' => "Penduduk Masuk Tahun {$year}", 'value' => (clone $members)->count()],
                 ['label' => 'Penduduk Masuk Bulan Ini', 'value' => (clone $members)->whereHas('kedatanganPenduduk', fn ($q) => $q->whereMonth('tanggal_datang', now()->month)->whereYear('tanggal_datang', $year))->count()],
             ],
             'monthly' => $this->monthly((clone $memberRows), 'kd.tanggal_datang', $year),
-            'monthlyTitle' => 'Penduduk Masuk Bulan Ini',
+            'monthlyTitle' => 'Jumlah Penduduk Masuk per Bulan',
             'regionTitle' => $this->regionTitle('Penduduk Masuk'),
             'regionValues' => $this->regionValues((clone $memberRows), 'anggota_kedatangan', 'kartu_keluargas'),
         ];
@@ -301,7 +290,7 @@ class StatistikKependudukanService
 
         return [
             'cards' => [
-                ['label' => 'Total Penduduk Keluar Tahun Ini', 'value' => (clone $members)->count()],
+                ['label' => "Total Penduduk Keluar Tahun {$year}", 'value' => (clone $members)->count()],
                 ['label' => 'Penduduk Keluar Bulan Ini', 'value' => (clone $members)->whereHas('perpindahan', fn ($q) => $q->whereMonth('tanggal_pindah', now()->month)->whereYear('tanggal_pindah', $year))->count()],
             ],
             'monthly' => $this->monthly($base, 'tanggal_pindah', $year),
@@ -318,7 +307,7 @@ class StatistikKependudukanService
 
         return [
             'cards' => [
-                ['label' => 'Total Penduduk Keluar Tahun Ini', 'value' => (clone $yearQuery)->count()],
+                ['label' => "Total Penduduk Keluar Tahun {$year}", 'value' => (clone $yearQuery)->count()],
             ],
             'monthly' => $this->monthly($base, 'tanggal_pindah', $year),
             'monthlyTitle' => 'Jumlah Penduduk Keluar per Bulan',

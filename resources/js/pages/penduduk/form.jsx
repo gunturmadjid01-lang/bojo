@@ -1,5 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import FormSelect from '@/components/form-select';
 import VillageDashboardLayout from '@/layouts/village-dashboard-layout';
@@ -19,7 +19,6 @@ const defaultForm = {
     nama_ayah: '',
     nama_ibu: '',
     telepon: '',
-    email: '',
     alamat: '',
     dusun_id: '',
     rw_id: '',
@@ -39,12 +38,21 @@ const agamaOptions = [
     { value: 'Kepercayaan', label: 'Kepercayaan' },
 ];
 
-export default function PendudukForm({ penduduk, dusuns = [], rws = [], rts = [], pendidikans = [], pekerjaans = [] }) {
+export default function PendudukForm({ penduduk, dusuns = [], rws = [], rts = [], pendidikans = [], pekerjaans = [], kartuKeluargas = [] }) {
     const editing = Boolean(penduduk);
     const { data, setData, post, put, processing, errors } = useForm({
         ...defaultForm,
         ...(penduduk || {}),
+        kartu_keluarga_id: '',
+        nomor_kk: '',
+        tanggal_diterbitkan: '',
+        hubungan_keluarga_utama: 'Kepala Keluarga',
+        penduduks: [],
     });
+
+    const addPenduduk = () => setData('penduduks', [...data.penduduks, { nik: '', nama_lengkap: '', tempat_lahir: '', tanggal_lahir: '', jenis_kelamin: 'Laki-laki', hubungan_keluarga: 'Anak' }]);
+    const updatePenduduk = (index, field, value) => setData('penduduks', data.penduduks.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value } : item));
+    const removePenduduk = (index) => setData('penduduks', data.penduduks.filter((_, itemIndex) => itemIndex !== index));
 
     const [selectedDusunId, setSelectedDusunId] = useState(penduduk?.dusun_id || '');
     const [selectedRwId, setSelectedRwId] = useState(penduduk?.rw_id || '');
@@ -206,12 +214,6 @@ export default function PendudukForm({ penduduk, dusuns = [], rws = [], rts = []
                             {fieldError('telepon')}
                         </label>
 
-                        <label className="block">
-                            <span className="mb-2 block text-sm font-medium text-slate-700">Email</span>
-                            <input type="email" value={data.email || ''} onChange={(event) => setData('email', event.target.value)} className={inputClass('email')} />
-                            {fieldError('email')}
-                        </label>
-
                         <label className="block md:col-span-2">
                             <span className="mb-2 block text-sm font-medium text-slate-700">Alamat</span>
                             <textarea value={data.alamat || ''} onChange={(event) => setData('alamat', event.target.value)} rows={3} className={inputClass('alamat', 'w-full rounded-md border px-3 py-2 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100')}></textarea>
@@ -247,6 +249,17 @@ export default function PendudukForm({ penduduk, dusuns = [], rws = [], rts = []
                             <span className="text-sm font-medium text-slate-700">Masih Hidup</span>
                         </label>
                     </div>
+
+                    {!editing && <div className="space-y-5 border-t border-slate-100 pt-6">
+                        <div><h2 className="font-semibold text-slate-800">Kartu Keluarga</h2><p className="text-sm text-slate-500">Pilih KK yang sudah ada atau isi nomor KK baru. Penduduk utama menjadi Kepala Keluarga.</p></div>
+                        <div className="grid gap-5 md:grid-cols-2">
+                            <label><span className="mb-2 block text-sm font-medium text-slate-700">KK yang sudah ada</span><FormSelect value={data.kartu_keluarga_id} options={kartuKeluargas.map((item) => ({ value: String(item.id), label: `${item.nomor_kk} - ${item.kepala_keluarga?.penduduk?.nama_lengkap || 'Belum ada kepala'} - ${item.alamat || '-'}` }))} onChange={(value) => { setData('kartu_keluarga_id', value); setData('hubungan_keluarga_utama', value ? 'Lainnya' : 'Kepala Keluarga'); if (value) setData('nomor_kk', ''); }} placeholder="Tanpa KK / buat KK baru" isClearable /></label>
+                            <label><span className="mb-2 block text-sm font-medium text-slate-700">Hubungan Penduduk Utama</span><FormSelect value={data.hubungan_keluarga_utama} options={['Kepala Keluarga','Suami','Istri','Anak','Menantu','Cucu','Orang Tua','Mertua','Famili Lain','Lainnya'].filter((value) => !data.kartu_keluarga_id || value !== 'Kepala Keluarga').map((value) => ({ value, label: value }))} onChange={(value) => setData('hubungan_keluarga_utama', value)} /></label>
+                            {!data.kartu_keluarga_id && <><label><span className="mb-2 block text-sm font-medium text-slate-700">Nomor KK Baru</span><input value={data.nomor_kk} onChange={(event) => setData('nomor_kk', event.target.value)} className={inputClass('nomor_kk')} />{fieldError('nomor_kk')}</label><label><span className="mb-2 block text-sm font-medium text-slate-700">Tanggal Diterbitkan</span><input type="date" value={data.tanggal_diterbitkan} onChange={(event) => setData('tanggal_diterbitkan', event.target.value)} className={inputClass('tanggal_diterbitkan')} /></label></>}
+                        </div>
+                        <div className="flex items-center justify-between"><div><h2 className="font-semibold text-slate-800">Anggota Keluarga Tambahan</h2><p className="text-sm text-slate-500">Alamat, Dusun, RW, dan RT mengikuti data penduduk utama.</p></div><button type="button" onClick={addPenduduk} className="inline-flex items-center gap-2 rounded-md bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-700"><Plus className="size-4" /> Tambah Penduduk</button></div>
+                        {data.penduduks.map((item, index) => <div key={index} className="grid gap-4 rounded-lg border border-slate-200 p-4 md:grid-cols-2"><div className="flex items-center justify-between md:col-span-2"><strong>Anggota {index + 1}</strong><button type="button" onClick={() => removePenduduk(index)} className="text-red-600"><Trash2 className="size-4" /></button></div><label><span>{requiredLabel('NIK')}</span><input value={item.nik} onChange={(event) => updatePenduduk(index, 'nik', event.target.value)} className={inputClass(`penduduks.${index}.nik`)} />{fieldError(`penduduks.${index}.nik`)}</label><label><span>{requiredLabel('Nama Lengkap')}</span><input value={item.nama_lengkap} onChange={(event) => updatePenduduk(index, 'nama_lengkap', event.target.value)} className={inputClass(`penduduks.${index}.nama_lengkap`)} />{fieldError(`penduduks.${index}.nama_lengkap`)}</label><label><span className="mb-2 block text-sm font-medium text-slate-700">Tempat Lahir</span><input value={item.tempat_lahir} onChange={(event) => updatePenduduk(index, 'tempat_lahir', event.target.value)} className={inputClass(`penduduks.${index}.tempat_lahir`)} /></label><label><span className="mb-2 block text-sm font-medium text-slate-700">Tanggal Lahir</span><input type="date" value={item.tanggal_lahir} onChange={(event) => updatePenduduk(index, 'tanggal_lahir', event.target.value)} className={inputClass(`penduduks.${index}.tanggal_lahir`)} /></label><label><span>{requiredLabel('Jenis Kelamin')}</span><FormSelect value={item.jenis_kelamin} options={[{ value: 'Laki-laki', label: 'Laki-laki' }, { value: 'Perempuan', label: 'Perempuan' }]} onChange={(value) => updatePenduduk(index, 'jenis_kelamin', value)} /></label><label><span>{requiredLabel('Hubungan Keluarga')}</span><FormSelect value={item.hubungan_keluarga} options={['Suami','Istri','Anak','Menantu','Cucu','Orang Tua','Mertua','Famili Lain','Lainnya'].map((value) => ({ value, label: value }))} onChange={(value) => updatePenduduk(index, 'hubungan_keluarga', value)} /></label></div>)}
+                    </div>}
 
                     <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
                         <Link href={editing ? `/penduduk/${penduduk.id}` : '/penduduk'} className="rounded-md border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Batal</Link>

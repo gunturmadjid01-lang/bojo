@@ -10,9 +10,11 @@ class DashboardController extends Controller
     {
         $service = app(\App\Services\StatistikKependudukanService::class);
         $modules = ['penduduk' => 'Penduduk', 'kartu-keluarga' => 'Kartu Keluarga'];
-        $year = $request->integer('statistik_tahun', now()->year);
+        $years = $service->years();
+        $requestedYear = $request->integer('statistik_tahun', now()->year);
+        $year = in_array($requestedYear, $years, true) ? $requestedYear : now()->year;
         $moduleStatistics = collect($modules)->mapWithKeys(fn ($title, $module) => [$module => ['title' => $title, 'statistics' => $service->for($module, $request->user(), $year)]])->all();
-        return \Inertia\Inertia::render('reports/index', ['moduleStatistics' => $moduleStatistics, 'statisticYear' => $year, 'statisticYears' => $service->years()]);
+        return \Inertia\Inertia::render('reports/index', ['moduleStatistics' => $moduleStatistics, 'statisticYear' => $year, 'statisticYears' => $years]);
     }
 
     public function index(Request $request)
@@ -26,7 +28,9 @@ class DashboardController extends Controller
             'penduduk-datang' => 'Penduduk Masuk',
             'penduduk-pindah' => 'Penduduk Keluar',
         ];
-        $year = $request->integer('statistik_tahun', now()->year);
+        $years = $service->years();
+        $requestedYear = $request->integer('statistik_tahun', now()->year);
+        $year = in_array($requestedYear, $years, true) ? $requestedYear : now()->year;
         $canViewResidents = \App\Support\ModulePermissions::allows($request->user(), 'penduduk', 'view');
         $residents = $canViewResidents ? \App\Models\Penduduk::with(['dusun:id,nama', 'pendidikan:id,nama'])->latest()->limit(100)->get()->map(fn ($p) => [
             'id' => $p->id, 'nik' => $p->nik, 'nama' => $p->nama_lengkap,
@@ -40,7 +44,7 @@ class DashboardController extends Controller
             'jumlahPenduduk' => $canViewResidents ? \App\Models\Penduduk::count() : 0,
             'moduleStatistics' => $moduleStatistics,
             'statisticYear' => $year,
-            'statisticYears' => $service->years(),
+            'statisticYears' => $years,
         ]);
     }
 }
