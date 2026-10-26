@@ -29,6 +29,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/penduduk', [PendudukController::class, 'index']);
         Route::get('/penduduk/{penduduk}', [PendudukController::class, 'show']);
         Route::post('/penduduk', [PopulationController::class, 'store'])->defaults('module', 'penduduk');
+        Route::post('/penduduk/{id}/update', [PopulationController::class, 'update'])->whereNumber('id')->defaults('module', 'penduduk');
         Route::match(['put', 'patch', 'post'], '/penduduk/{id}', [PopulationController::class, 'update'])->whereNumber('id')->defaults('module', 'penduduk');
         Route::delete('/penduduk/{id}', [PopulationController::class, 'destroy'])->whereNumber('id')->defaults('module', 'penduduk');
         $populationModules = ['kartu-keluarga', 'anggota-kartu-keluarga', 'kelahiran', 'kematian', 'penduduk-datang', 'penduduk-pindah'];
