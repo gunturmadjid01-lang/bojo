@@ -38,7 +38,7 @@ class WilayahAccess
 
     public function unrestricted(): bool
     {
-        return $this->system || ($this->user()?->hasRole('super_admin') ?? false);
+        return $this->system || ($this->user()?->isSuperAdmin() ?? false);
     }
 
     public function assignments()

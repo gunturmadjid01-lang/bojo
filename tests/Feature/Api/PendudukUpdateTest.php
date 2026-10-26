@@ -13,10 +13,10 @@ class PendudukUpdateTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_super_admin_can_update_penduduk_using_android_payload(): void
+    public function test_super_admin_display_name_can_update_penduduk_using_android_payload(): void
     {
         $actor = User::factory()->create();
-        $actor->assignRole(Role::findOrCreate('super_admin', 'web'));
+        $actor->assignRole(Role::findOrCreate('Super Admin', 'web'));
         Sanctum::actingAs($actor, ['api:read', 'api:write']);
 
         $penduduk = Penduduk::create([
