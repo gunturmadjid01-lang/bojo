@@ -87,9 +87,10 @@ class PopulationController extends ApiController
             });
             return response()->json(['data' => $this->payload($module, $item)], 201);
         }
-        $data = $this->validated($request, $module);
+        $access = app(\App\Services\WilayahAccess::class);
+        $data = $access->forUser($request->user(), fn () => $this->validated($request, $module));
 
-        $item = match ($module) {
+        $item = $access->forUser($request->user(), fn () => match ($module) {
             'kelahiran' => app(KelahiranService::class)->store($data, $request->user()),
             'kematian' => app(KematianService::class)->store($data, $request->user()),
             'penduduk-datang' => app(\App\Services\IndividualMigrationService::class)->arrival($data, $request->user()),
@@ -97,7 +98,7 @@ class PopulationController extends ApiController
             'kartu-keluarga' => $this->storeKartuKeluarga($data),
             'penduduk' => Penduduk::create($data),
             default => $this->model($module)::create($data),
-        };
+        });
 
         return response()->json(['data' => $this->payload($module, $item)], 201);
     }
@@ -118,6 +119,11 @@ class PopulationController extends ApiController
 
             if ($module === 'kematian') {
                 $item = app(KematianService::class)->update($item, $data, $request->user());
+            } elseif ($module === 'penduduk-datang') {
+                $personData = $data['penduduk'];
+                unset($data['penduduk']);
+                $item->penduduk()->update($personData);
+                $item->update($data);
             } else {
                 $item->update($data);
             }
@@ -206,7 +212,7 @@ class PopulationController extends ApiController
             ]),
             'penduduk-datang' => $request->validate([
                 'tanggal_datang' => ['required', 'date'],
-                'penduduk' => ['required', 'array'], 'penduduk.nik' => ['required', 'string', 'max:16', 'unique:penduduks,nik'],
+                'penduduk' => ['required', 'array'], 'penduduk.nik' => ['required', 'string', 'max:16', Rule::unique('penduduks', 'nik')->ignore($existing?->penduduk_id)],
                 'penduduk.nama_lengkap' => ['required', 'string', 'max:255'], 'penduduk.jenis_kelamin' => ['required', 'in:Laki-laki,Perempuan'],
                 'penduduk.alamat' => ['required', 'string'], 'penduduk.dusun_id' => ['required', new \App\Rules\WilayahExists(\App\Models\Dusun::class)],
                 'penduduk.rw_id' => ['nullable', new \App\Rules\WilayahExists(\App\Models\RW::class)], 'penduduk.rt_id' => ['nullable', new \App\Rules\WilayahExists(\App\Models\RT::class)],
@@ -289,6 +295,7 @@ class PopulationController extends ApiController
     {
         $members = $item->anggotaKedatangan ?? collect();
         $first = $members->first();
-        return ['id' => $item->id, 'jenis_kedatangan' => $item->jenis_kedatangan, 'tanggal_datang' => $item->tanggal_datang?->toDateString(), 'penduduk_id' => $item->penduduk_id ?? $first?->penduduk_id, 'penduduk' => $item->penduduk?->only(['id', 'nik', 'nama_lengkap']) ?? $first?->penduduk?->only(['id', 'nik', 'nama_lengkap']), 'kartu_keluarga_tujuan_id' => $item->kartu_keluarga_tujuan_id, 'kartu_keluarga_tujuan' => $item->kartuKeluargaTujuan?->only(['id', 'nomor_kk', 'alamat', 'dusun_id', 'rw_id', 'rt_id']), 'anggota' => $members->map(fn ($member) => ['id' => $member->id, 'penduduk_id' => $member->penduduk_id, 'hubungan_keluarga' => $member->hubungan_keluarga, 'penduduk' => $member->penduduk?->only(['id', 'nik', 'nama_lengkap', 'jenis_kelamin'])])->values()->all(), 'anggota_kk' => $item->kartuKeluargaTujuan?->anggotaKeluarga?->map(fn ($member) => ['id' => $member->id, 'penduduk_id' => $member->penduduk_id, 'hubungan_keluarga' => $member->hubungan_keluarga, 'aktif' => $member->aktif, 'penduduk' => $member->penduduk?->only(['id', 'nik', 'nama_lengkap', 'jenis_kelamin'])])->values()->all() ?? [], 'jenis_tujuan_kk' => $item->jenis_tujuan_kk, 'nomor_surat_pindah' => $item->nomor_surat_pindah, 'alamat_sebelumnya' => $item->alamat_sebelumnya, 'desa_sebelumnya' => $item->desa_sebelumnya, 'kabupaten_sebelumnya' => $item->kabupaten_sebelumnya, 'status' => $item->status, 'catatan' => $item->catatan];
+        $person = $item->penduduk ?? $first?->penduduk;
+        return ['id' => $item->id, 'jenis_kedatangan' => $item->jenis_kedatangan, 'tanggal_datang' => $item->tanggal_datang?->toDateString(), 'penduduk_id' => $item->penduduk_id ?? $first?->penduduk_id, 'penduduk' => $person ? collect($person->toArray())->only(['id', 'nik', 'nama_lengkap', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama', 'golongan_darah', 'status_perkawinan', 'pendidikan_id', 'pekerjaan_id', 'kewarganegaraan', 'nama_ayah', 'nama_ibu', 'telepon', 'alamat', 'dusun_id', 'rw_id', 'rt_id'])->all() : null, 'kartu_keluarga_tujuan_id' => $item->kartu_keluarga_tujuan_id, 'kartu_keluarga_tujuan' => $item->kartuKeluargaTujuan?->only(['id', 'nomor_kk', 'alamat', 'dusun_id', 'rw_id', 'rt_id']), 'anggota' => $members->map(fn ($member) => ['id' => $member->id, 'penduduk_id' => $member->penduduk_id, 'hubungan_keluarga' => $member->hubungan_keluarga, 'penduduk' => $member->penduduk?->only(['id', 'nik', 'nama_lengkap', 'jenis_kelamin'])])->values()->all(), 'anggota_kk' => $item->kartuKeluargaTujuan?->anggotaKeluarga?->map(fn ($member) => ['id' => $member->id, 'penduduk_id' => $member->penduduk_id, 'hubungan_keluarga' => $member->hubungan_keluarga, 'aktif' => $member->aktif, 'penduduk' => $member->penduduk?->only(['id', 'nik', 'nama_lengkap', 'jenis_kelamin'])])->values()->all() ?? [], 'jenis_tujuan_kk' => $item->jenis_tujuan_kk, 'nomor_surat_pindah' => $item->nomor_surat_pindah, 'alamat_sebelumnya' => $item->alamat_sebelumnya, 'desa_sebelumnya' => $item->desa_sebelumnya, 'kecamatan_sebelumnya' => $item->kecamatan_sebelumnya, 'kabupaten_sebelumnya' => $item->kabupaten_sebelumnya, 'provinsi_sebelumnya' => $item->provinsi_sebelumnya, 'status' => $item->status, 'catatan' => $item->catatan];
     }
 }

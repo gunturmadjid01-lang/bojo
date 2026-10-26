@@ -27,7 +27,7 @@ class KelahiranService
 
             $isLegacyPayload = empty($data['nama_lengkap']) && empty($data['jenis_kelamin']);
 
-            if ($user) {
+            if ($user && ! $user->isSuperAdmin()) {
                 $penugasan = $this->activeAssignmentForUser($user);
                 $this->assertKartuKeluargaScope($kartuKeluarga, $penugasan);
             }
@@ -141,7 +141,7 @@ class KelahiranService
 
     private function assertActiveAssignment(?User $user): void
     {
-        if (! $user) {
+        if (! $user || $user->isSuperAdmin()) {
             return;
         }
 
@@ -157,7 +157,7 @@ class KelahiranService
         if (! $user) {
             return null;
         }
-        return PenugasanPerangkat::query()
+        return PenugasanPerangkat::withoutGlobalScope('wilayah')
             ->aktif()
             ->whereHas('perangkatDesa', fn ($query) => $query->where('user_id', $user->id))
             ->with(['jabatanDesa', 'desa', 'dusun'])

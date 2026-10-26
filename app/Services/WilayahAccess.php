@@ -76,7 +76,9 @@ class WilayahAccess
                         'r_t_s' => $branch->whereIn('r_t_s.rw_id', RW::withoutGlobalScope('wilayah')->select('id')->whereIn('dusun_id', $dusuns)),
                         'anggota_kartu_keluargas' => $branch->whereIn($table.'.kartu_keluarga_id', $families)->whereIn($table.'.penduduk_id', $citizens),
                         'kelahirans', 'sosial_ekonomi_keluargas' => $branch->whereIn($table.'.kartu_keluarga_id', $families),
-                        'kedatangan_penduduks' => $branch->whereIn($table.'.kartu_keluarga_tujuan_id', $families),
+                        'kedatangan_penduduks' => $branch->where(fn ($arrival) => $arrival
+                            ->whereIn($table.'.kartu_keluarga_tujuan_id', $families)
+                            ->orWhereIn($table.'.penduduk_id', $citizens)),
                         'perpindahan_penduduks' => $branch->whereHas('anggotaPerpindahan.penduduk', fn ($q) => $q->whereIn('penduduks.id', $citizens)),
                         'penerima_bantuans', 'dokumen_penduduks' => $branch->where(fn ($q) => $q->whereIn($table.'.penduduk_id', $citizens)->orWhereIn($table.'.kartu_keluarga_id', $families)),
                         'penyaluran_bantuans' => $branch->whereHas('penerima'),
