@@ -105,20 +105,25 @@ class PopulationController extends ApiController
     public function update(Request $request, string $module, string $id): JsonResponse
     {
         $this->authorizeModule($request, $module, 'edit');
-        $item = $this->model($module)::query()->findOrFail((int) $id);
-        $data = $this->validated($request, $module, $item);
+        return app(\App\Services\WilayahAccess::class)->forUser($request->user(), function () use ($request, $module, $id): JsonResponse {
+            $model = $this->model($module);
+            $item = $model::query()->find((int) $id);
+            if (! $item) {
+                $existsOutsideScope = $model::withoutGlobalScope('wilayah')->whereKey((int) $id)->exists();
+                abort($existsOutsideScope ? 403 : 404, $existsOutsideScope
+                    ? 'Data berada di luar wilayah penugasan akun Android ini.'
+                    : 'Data yang akan diedit tidak ditemukan di server.');
+            }
+            $data = $this->validated($request, $module, $item);
 
-        if ($module === 'penduduk') {
-            $item->update($data);
-        } elseif ($module === 'kematian') {
-            $item = app(KematianService::class)->update($item, $data, $request->user());
-        } elseif (in_array($module, ['kelahiran', 'penduduk-datang', 'penduduk-pindah'], true)) {
-            $item->update($data);
-        } else {
-            $item->update($data);
-        }
+            if ($module === 'kematian') {
+                $item = app(KematianService::class)->update($item, $data, $request->user());
+            } else {
+                $item->update($data);
+            }
 
-        return response()->json(['data' => $this->payload($module, $item->refresh())]);
+            return response()->json(['data' => $this->payload($module, $item->refresh())]);
+        });
     }
 
     public function destroy(Request $request, string $module, string $id): JsonResponse
