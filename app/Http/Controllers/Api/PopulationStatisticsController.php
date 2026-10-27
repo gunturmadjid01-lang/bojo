@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class PopulationStatisticsController extends ApiController
 {
-    private const MODULES = ['penduduk', 'kelahiran', 'kematian', 'penduduk-datang', 'penduduk-pindah'];
+    private const MODULES = ['penduduk', 'kartu-keluarga', 'kelahiran', 'kematian', 'penduduk-datang', 'penduduk-pindah'];
 
     public function __invoke(Request $request, string $module, StatistikKependudukanService $statistics): JsonResponse
     {

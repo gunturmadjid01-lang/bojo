@@ -171,10 +171,11 @@ class StatistikKependudukanService
         ];
     }
 
-    private function genderCounts(Builder $query, string $baseTable): array
+    private function genderCounts(Builder $query, string $baseTable, string $dateColumn, int $year, ?string $eventAlias = null): array
     {
         return (clone $query)
             ->join('penduduks as statistik_penduduk', 'statistik_penduduk.id', '=', $baseTable.'.penduduk_id')
+            ->whereYear(($eventAlias ?? $baseTable).'.'.$dateColumn, $year)
             ->selectRaw("COALESCE(NULLIF(TRIM(statistik_penduduk.jenis_kelamin), ''), 'Belum Diketahui') AS label, COUNT(*) AS value")
             ->groupBy('statistik_penduduk.jenis_kelamin')
             ->get()
@@ -354,7 +355,7 @@ class StatistikKependudukanService
             'monthlyTitle' => 'Kelahiran per Bulan',
             'regionTitle' => $this->regionTitle('Jumlah Kelahiran'),
             'regionValues' => $perDusun,
-            ...($includeRecaps ? $this->eventTables('Kelahiran', $perDusun, $monthly, $this->genderCounts($yearQuery, 'kelahirans')) : []),
+            ...($includeRecaps ? $this->eventTables('Kelahiran', $perDusun, $monthly, $this->genderCounts($base, 'kelahirans', 'tanggal_lahir', $year)) : []),
         ];
     }
 
@@ -378,7 +379,7 @@ class StatistikKependudukanService
             'monthlyTitle' => 'Kematian per Bulan',
             'regionTitle' => $this->regionTitle('Jumlah Kematian'),
             'regionValues' => $perDusun,
-            ...($includeRecaps ? $this->eventTables('Kematian', $perDusun, $monthly, $this->genderCounts($yearQuery, 'kematians')) : []),
+            ...($includeRecaps ? $this->eventTables('Kematian', $perDusun, $monthly, $this->genderCounts($base, 'kematians', 'tanggal_meninggal', $year)) : []),
         ];
     }
 
@@ -400,7 +401,7 @@ class StatistikKependudukanService
             'monthlyTitle' => 'Jumlah Penduduk Masuk per Bulan',
             'regionTitle' => $this->regionTitle('Penduduk Masuk'),
             'regionValues' => $perDusun,
-            ...($includeRecaps ? $this->eventTables('Penduduk Masuk', $perDusun, $monthly, $this->genderCounts($memberRows, 'anggota_kedatangan')) : []),
+            ...($includeRecaps ? $this->eventTables('Penduduk Masuk', $perDusun, $monthly, $this->genderCounts($memberRows, 'anggota_kedatangan', 'tanggal_datang', $year, 'kd')) : []),
         ];
     }
 
@@ -425,7 +426,7 @@ class StatistikKependudukanService
             'monthlyTitle' => 'Jumlah Penduduk Pindah per Bulan',
             'regionTitle' => $this->regionTitle('Jumlah Penduduk Pindah'),
             'regionValues' => $perDusun,
-            ...($includeRecaps ? $this->eventTables('Penduduk Keluar', $perDusun, $monthly, $this->genderCounts($memberRows, 'anggota_perpindahan')) : []),
+            ...($includeRecaps ? $this->eventTables('Penduduk Keluar', $perDusun, $monthly, $this->genderCounts($memberRows, 'anggota_perpindahan', 'tanggal_pindah', $year, 'pph')) : []),
         ];
     }
 
@@ -444,7 +445,7 @@ class StatistikKependudukanService
             'monthlyTitle' => 'Jumlah Penduduk Pindah per Bulan',
             'regionTitle' => 'Jumlah Penduduk Pindah per Dusun',
             'regionValues' => $perDusun,
-            ...($includeRecaps ? $this->eventTables('Penduduk Keluar', $perDusun, $monthly, $this->genderCounts($yearQuery, 'penduduk_pindahs')) : []),
+            ...($includeRecaps ? $this->eventTables('Penduduk Keluar', $perDusun, $monthly, $this->genderCounts($base, 'penduduk_pindahs', 'tanggal_pindah', $year)) : []),
         ];
     }
 
