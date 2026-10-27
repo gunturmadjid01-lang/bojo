@@ -10,7 +10,7 @@ export default function MasterResourcePage({ title, group = 'Master Data', creat
     const { props } = usePage();
     const user = props?.auth?.user;
     const [indexTab, setIndexTab] = useState('data');
-    const hasPendudukTables = Boolean(props?.statistics?.rekapTables);
+    const hasStatisticsTables = Boolean(props?.statistics?.rekapTables);
     const canCreate = canCreateOverride ?? (createHref ? canAccessHref(user, createHref, 'create') : false);
 
     return (
@@ -28,10 +28,10 @@ export default function MasterResourcePage({ title, group = 'Master Data', creat
                         </Link>
                     )}
                 </div>
-                {hasPendudukTables && <div className="flex flex-wrap gap-2" role="tablist" aria-label="Data dan statistik penduduk">
+                {hasStatisticsTables && <div className="flex flex-wrap gap-2" role="tablist" aria-label={`Data dan statistik ${title.toLowerCase()}`}>
                     {[['data', 'Data'], ['rekap', 'Rekap'], ['grafik', 'Grafik']].map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={indexTab === key} onClick={() => setIndexTab(key)} className={`rounded-md px-4 py-2 text-sm font-semibold ${indexTab === key ? 'bg-cyan-600 text-white' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>{label}</button>)}
                 </div>}
-                {showStatistics && (!hasPendudukTables || indexTab !== 'data') && (
+                {showStatistics && (!hasStatisticsTables || indexTab !== 'data') && (
                     <PopulationStatistics
                         statistics={props?.statistics}
                         years={props?.statisticYears}
@@ -41,7 +41,7 @@ export default function MasterResourcePage({ title, group = 'Master Data', creat
                         recapTab={indexTab}
                     />
                 )}
-                {(!hasPendudukTables || indexTab === 'data') && <ResourceDataTable {...tableProps} />}
+                {(!hasStatisticsTables || indexTab === 'data') && <ResourceDataTable {...tableProps} />}
             </section>
         </VillageDashboardLayout>
     );

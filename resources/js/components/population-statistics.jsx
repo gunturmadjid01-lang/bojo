@@ -178,7 +178,7 @@ function PendudukRecapTabs({ statistics, years, selectedYear, path, activeTab })
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <label className="flex items-center gap-2 text-sm font-medium text-slate-600">Tahun statistik<select value={selectedYear || ''} onChange={changeYear} className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700">{years.map((year) => <option key={year} value={year}>{year}</option>)}</select></label>
         </div>
-        {activeTab === 'rekap' && <RecapTable title="Rekap Total Penduduk" columns={['Keterangan', 'Jumlah']} rows={(statistics.cards || []).map((card) => ({ label: card.label, total: Number(card.value || 0) }))} />}
+        {activeTab === 'rekap' && <RecapTable title={statistics.summaryTitle || 'Rekap Total'} columns={['Keterangan', 'Jumlah']} rows={(statistics.cards || []).map((card) => ({ label: card.label, total: Number(card.value || 0) }))} />}
         {tables.map((table) => <RecapTable key={table.title} {...table} />)}
     </section>;
 }
@@ -189,7 +189,7 @@ function RecapTable({ title, columns = [], rows = [] }) {
         <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
                 <thead><tr className="bg-white">{columns.map((column) => <th key={column} className="border-y border-slate-200 px-4 py-2 text-left font-semibold text-slate-600">{column}</th>)}</tr></thead>
-                <tbody>{rows.length ? rows.map((row, index) => <tr key={`${row.label}-${index}`} className={row.label === 'TOTAL' ? 'bg-cyan-50 font-bold text-slate-800' : 'text-slate-700'}>{columns.map((column, columnIndex) => <td key={column} className={`border-b border-slate-100 px-4 py-2 ${columnIndex > 0 ? 'text-right tabular-nums' : ''}`}>{columnIndex === 0 ? row.label : numberFormatter.format(Number(row[column] ?? (['Jumlah Penduduk', 'Jumlah', 'Total'].includes(column) ? row.total : 0)))}</td>)}</tr>) : <tr><td className="px-4 py-5 text-center text-slate-500" colSpan={columns.length}>Belum ada data dalam cakupan penugasan.</td></tr>}</tbody>
+                <tbody>{rows.length ? rows.map((row, index) => <tr key={`${row.label}-${index}`} className={row.label === 'TOTAL' ? 'bg-cyan-50 font-bold text-slate-800' : 'text-slate-700'}>{columns.map((column, columnIndex) => <td key={column} className={`border-b border-slate-100 px-4 py-2 ${columnIndex > 0 ? 'text-right tabular-nums' : ''}`}>{columnIndex === 0 ? row.label : numberFormatter.format(Number(row[column] ?? (row.total !== undefined ? row.total : 0)))}</td>)}</tr>) : <tr><td className="px-4 py-5 text-center text-slate-500" colSpan={columns.length}>Belum ada data dalam cakupan penugasan.</td></tr>}</tbody>
             </table>
         </div>
     </div>;

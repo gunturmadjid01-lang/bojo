@@ -21,10 +21,10 @@ class StatistikKependudukanService
                 'kartu-keluarga' => $this->kartuKeluarga($year),
 
                 'penduduk' => $this->penduduk($year, $includeRecaps),
-                'kelahiran' => $this->kelahiran($year),
-                'kematian' => $this->kematian($year),
-                'penduduk-datang' => $this->pendudukDatang($year),
-                'penduduk-pindah' => $this->pendudukPindah($year),
+                'kelahiran' => $this->kelahiran($year, $includeRecaps),
+                'kematian' => $this->kematian($year, $includeRecaps),
+                'penduduk-datang' => $this->pendudukDatang($year, $includeRecaps),
+                'penduduk-pindah' => $this->pendudukPindah($year, $includeRecaps),
                 default => [],
             } + [
                 'year' => $year,
@@ -46,7 +46,7 @@ class StatistikKependudukanService
         $year = in_array($requestedYear, $years, true) ? $requestedYear : now()->year;
 
         return [
-            'statistics' => $this->for($module, $request->user(), $year, $module === 'penduduk'),
+            'statistics' => $this->for($module, $request->user(), $year, in_array($module, ['penduduk', 'kelahiran', 'kematian', 'penduduk-datang', 'penduduk-pindah'], true)),
             'statisticYears' => $years,
             'statisticYear' => $year,
         ];
@@ -56,18 +56,47 @@ class StatistikKependudukanService
     {
         $active = KartuKeluarga::query()->where('status', 'aktif');
         $activeMembers = AnggotaKartuKeluarga::query()->where('aktif', true);
+        $perDusun = $this->regionValues((clone $active), 'kartu_keluargas');
+        $monthly = $this->monthly((clone $active), 'tanggal_diterbitkan', $year);
+        $membersBySize = DB::table('kartu_keluargas as kk')
+            ->leftJoin('anggota_kartu_keluargas as anggota', function ($join) {
+                $join->on('anggota.kartu_keluarga_id', '=', 'kk.id')->where('anggota.aktif', true);
+            })
+            ->where('kk.status', 'aktif')
+            ->groupBy('kk.id')
+            ->selectRaw('COUNT(anggota.id) AS jumlah_anggota')
+            ->get()
+            ->groupBy(fn ($row) => (int) $row->jumlah_anggota)
+            ->map(fn ($rows, $count) => ['label' => "{$count} orang", 'value' => $rows->count()])
+            ->values()->all();
+        $dusunRows = collect($perDusun)->map(fn (array $row) => ['label' => $row['label'], 'total' => (int) $row['value']])->values();
+        $dusunRows->push(['label' => 'TOTAL', 'total' => $dusunRows->sum('total')]);
+        $monthRows = collect(self::MONTHS)->values()->map(fn (string $month, int $index) => ['label' => $month, 'total' => (int) ($monthly[$index] ?? 0)]);
+        $monthRows->push(['label' => 'TOTAL', 'total' => $monthRows->sum('total')]);
+        $sizeRows = collect($membersBySize)->map(fn (array $row) => ['label' => $row['label'], 'total' => (int) $row['value']])->values();
+        $sizeRows->push(['label' => 'TOTAL', 'total' => $sizeRows->sum('total')]);
 
         return [
             'cards' => [
                 ['label' => 'Total KK Aktif', 'value' => (clone $active)->count()],
-                // ['label' => 'Total Anggota KK Aktif', 'value' => (clone $activeMembers)->whereHas('kartuKeluarga', fn ($q) => $q->where('status', 'aktif'))->count()],
+                ['label' => 'Total Anggota KK Aktif', 'value' => (clone $activeMembers)->whereHas('kartuKeluarga', fn ($q) => $q->where('status', 'aktif'))->count()],
                 ['label' => 'KK Baru Tahun Ini', 'value' => (clone $active)->whereYear('tanggal_diterbitkan', $year)->count()],
             ],
-            'monthly' => [],
-            'monthlyTitle' => null,
+            'summaryTitle' => 'Rekap Total Kartu Keluarga',
+            'rekapTables' => [[
+                'title' => 'Rekap Kartu Keluarga Per Dusun',
+                'columns' => ['Dusun', 'Jumlah KK'],
+                'rows' => $dusunRows->all(),
+            ]],
+            'grafikTables' => [
+                ['title' => 'Rekap KK Baru Per Bulan', 'columns' => ['Bulan', 'Jumlah KK'], 'rows' => $monthRows->all()],
+                ['title' => 'Rekap KK Aktif Menurut Jumlah Anggota', 'columns' => ['Jumlah Anggota', 'Jumlah KK'], 'rows' => $sizeRows->all()],
+            ],
+            'monthly' => $monthly,
+            'monthlyTitle' => 'Jumlah KK Baru per Bulan',
             'showMonthlyChart' => false,
             'regionTitle' => $this->regionTitle('Jumlah Kartu Keluarga'),
-            'regionValues' => $this->regionValues((clone $active), 'kartu_keluargas'),
+            'regionValues' => $perDusun,
         ];
     }
 
@@ -114,6 +143,43 @@ class StatistikKependudukanService
             'demographicsByRegion' => $this->pendudukDemographicsByRegion(),
             ...($includeRecaps ? $this->pendudukRecapTables() : []),
         ];
+    }
+
+    private function eventTables(string $label, array $perDusun, array $monthly, array $gender): array
+    {
+        $dusunRows = collect($perDusun)->map(fn (array $row) => ['label' => $row['label'], 'total' => (int) $row['value']])->values();
+        $dusunRows->push(['label' => 'TOTAL', 'total' => $dusunRows->sum('total')]);
+        $monthRows = collect(self::MONTHS)->values()->map(fn (string $month, int $index) => [
+            'label' => $month,
+            'total' => (int) ($monthly[$index] ?? 0),
+        ]);
+        $monthRows->push(['label' => 'TOTAL', 'total' => $monthRows->sum('total')]);
+        $genderRows = collect($gender)->map(fn (array $row) => ['label' => $row['label'], 'total' => (int) $row['value']])->values();
+        $genderRows->push(['label' => 'TOTAL', 'total' => $genderRows->sum('total')]);
+
+        return [
+            'summaryTitle' => "Rekap Total {$label}",
+            'rekapTables' => [[
+                'title' => "Rekap {$label} Per Dusun",
+                'columns' => ['Dusun', "Jumlah {$label}"],
+                'rows' => $dusunRows->all(),
+            ]],
+            'grafikTables' => [
+                ['title' => "Rekap {$label} Per Bulan", 'columns' => ['Bulan', "Jumlah {$label}"], 'rows' => $monthRows->all()],
+                ['title' => "Rekap {$label} Menurut Jenis Kelamin", 'columns' => ['Jenis Kelamin', "Jumlah {$label}"], 'rows' => $genderRows->all()],
+            ],
+        ];
+    }
+
+    private function genderCounts(Builder $query, string $baseTable): array
+    {
+        return (clone $query)
+            ->join('penduduks as statistik_penduduk', 'statistik_penduduk.id', '=', $baseTable.'.penduduk_id')
+            ->selectRaw("COALESCE(NULLIF(TRIM(statistik_penduduk.jenis_kelamin), ''), 'Belum Diketahui') AS label, COUNT(*) AS value")
+            ->groupBy('statistik_penduduk.jenis_kelamin')
+            ->get()
+            ->map(fn ($row) => ['label' => (string) $row->label, 'value' => (int) $row->value])
+            ->all();
     }
 
     private function pendudukRecapTables(): array
@@ -269,10 +335,12 @@ class StatistikKependudukanService
         return $dusuns->map(fn ($dusun) => ['label' => $dusun->nama, 'value' => (int) ($rows[$dusun->id] ?? 0)])->all();
     }
 
-    private function kelahiran(int $year): array
+    private function kelahiran(int $year, bool $includeRecaps = false): array
     {
         $base = Kelahiran::query();
         $yearQuery = (clone $base)->whereYear('tanggal_lahir', $year);
+        $monthly = $this->monthly($base, 'tanggal_lahir', $year);
+        $perDusun = $this->regionValues($yearQuery, 'kelahirans', 'kartu_keluargas');
 
         return [
             'cards' => [
@@ -282,17 +350,20 @@ class StatistikKependudukanService
                 ['label' => 'Bayi Perempuan', 'value' => (clone $yearQuery)->whereHas('penduduk', fn ($q) => $q->where('jenis_kelamin', 'Perempuan'))->count()],
 
             ],
-            'monthly' => $this->monthly($base, 'tanggal_lahir', $year),
+            'monthly' => $monthly,
             'monthlyTitle' => 'Kelahiran per Bulan',
             'regionTitle' => $this->regionTitle('Jumlah Kelahiran'),
-            'regionValues' => $this->regionValues($yearQuery, 'kelahirans', 'kartu_keluargas'),
+            'regionValues' => $perDusun,
+            ...($includeRecaps ? $this->eventTables('Kelahiran', $perDusun, $monthly, $this->genderCounts($yearQuery, 'kelahirans')) : []),
         ];
     }
 
-    private function kematian(int $year): array
+    private function kematian(int $year, bool $includeRecaps = false): array
     {
         $base = Kematian::query();
         $yearQuery = (clone $base)->whereYear('tanggal_meninggal', $year);
+        $monthly = $this->monthly($base, 'tanggal_meninggal', $year);
+        $perDusun = $this->regionValues($yearQuery, 'kematians', 'penduduks');
         $needsHead = KartuKeluarga::query()->where('status', 'aktif')->whereDoesntHave('anggotaKeluarga', fn ($q) => $q->where('aktif', true)->where('hubungan_keluarga', 'Kepala Keluarga'))->count();
 
         return [
@@ -303,66 +374,77 @@ class StatistikKependudukanService
                 ['label' => 'Perempuan', 'value' => (clone $yearQuery)->whereHas('penduduk', fn ($q) => $q->where('jenis_kelamin', 'Perempuan'))->count()],
 
             ],
-            'monthly' => $this->monthly($base, 'tanggal_meninggal', $year),
+            'monthly' => $monthly,
             'monthlyTitle' => 'Kematian per Bulan',
             'regionTitle' => $this->regionTitle('Jumlah Kematian'),
-            'regionValues' => $this->regionValues($yearQuery, 'kematians', 'penduduks'),
+            'regionValues' => $perDusun,
+            ...($includeRecaps ? $this->eventTables('Kematian', $perDusun, $monthly, $this->genderCounts($yearQuery, 'kematians')) : []),
         ];
     }
 
-    private function pendudukDatang(int $year): array
+    private function pendudukDatang(int $year, bool $includeRecaps = false): array
     {
         $events = KedatanganPenduduk::query();
         $yearEvents = (clone $events)->whereYear('tanggal_datang', $year);
         $members = AnggotaKedatangan::query()->whereHas('kedatanganPenduduk', fn ($q) => $q->whereYear('tanggal_datang', $year));
         $memberRows = (clone $members)->join('kedatangan_penduduks as kd', 'kd.id', '=', 'anggota_kedatangan.kedatangan_penduduk_id');
+        $monthly = $this->monthly((clone $memberRows), 'kd.tanggal_datang', $year);
+        $perDusun = $this->regionValues((clone $memberRows), 'anggota_kedatangan', 'kartu_keluargas');
 
         return [
             'cards' => [
                 ['label' => "Penduduk Masuk Tahun {$year}", 'value' => (clone $members)->count()],
                 ['label' => 'Penduduk Masuk Bulan Ini', 'value' => (clone $members)->whereHas('kedatanganPenduduk', fn ($q) => $q->whereMonth('tanggal_datang', now()->month)->whereYear('tanggal_datang', $year))->count()],
             ],
-            'monthly' => $this->monthly((clone $memberRows), 'kd.tanggal_datang', $year),
+            'monthly' => $monthly,
             'monthlyTitle' => 'Jumlah Penduduk Masuk per Bulan',
             'regionTitle' => $this->regionTitle('Penduduk Masuk'),
-            'regionValues' => $this->regionValues((clone $memberRows), 'anggota_kedatangan', 'kartu_keluargas'),
+            'regionValues' => $perDusun,
+            ...($includeRecaps ? $this->eventTables('Penduduk Masuk', $perDusun, $monthly, $this->genderCounts($memberRows, 'anggota_kedatangan')) : []),
         ];
     }
 
-    private function pendudukPindah(int $year): array
+    private function pendudukPindah(int $year, bool $includeRecaps = false): array
     {
         if (!PerpindahanPenduduk::query()->exists()) {
-            return $this->legacyPendudukPindah($year);
+            return $this->legacyPendudukPindah($year, $includeRecaps);
         }
         $base = PerpindahanPenduduk::query();
         $yearQuery = (clone $base)->whereYear('tanggal_pindah', $year);
         $members = AnggotaPerpindahan::query()->whereHas('perpindahan', fn ($query) => $query->whereYear('tanggal_pindah', $year));
+        $memberRows = (clone $members)->join('perpindahan_penduduks as pph', 'pph.id', '=', 'anggota_perpindahan.perpindahan_penduduk_id');
+        $monthly = $this->monthly((clone $memberRows), 'pph.tanggal_pindah', $year);
+        $perDusun = $this->regionValues((clone $memberRows), 'anggota_perpindahan', 'kartu_keluargas');
 
         return [
             'cards' => [
                 ['label' => "Total Penduduk Pindah Tahun {$year}", 'value' => (clone $members)->count()],
                 ['label' => 'Penduduk Pindah Bulan Ini', 'value' => (clone $members)->whereHas('perpindahan', fn ($q) => $q->whereMonth('tanggal_pindah', now()->month)->whereYear('tanggal_pindah', $year))->count()],
             ],
-            'monthly' => $this->monthly($base, 'tanggal_pindah', $year),
+            'monthly' => $monthly,
             'monthlyTitle' => 'Jumlah Penduduk Pindah per Bulan',
             'regionTitle' => $this->regionTitle('Jumlah Penduduk Pindah'),
-            'regionValues' => $this->regionValues($yearQuery, 'penduduk_pindahs', 'penduduks'),
+            'regionValues' => $perDusun,
+            ...($includeRecaps ? $this->eventTables('Penduduk Keluar', $perDusun, $monthly, $this->genderCounts($memberRows, 'anggota_perpindahan')) : []),
         ];
     }
 
-    private function legacyPendudukPindah(int $year): array
+    private function legacyPendudukPindah(int $year, bool $includeRecaps = false): array
     {
         $base = PendudukPindah::query();
         $yearQuery = (clone $base)->whereYear('tanggal_pindah', $year);
+        $monthly = $this->monthly($base, 'tanggal_pindah', $year);
+        $perDusun = $this->regionValues($yearQuery, 'penduduk_pindahs', 'penduduks');
 
         return [
             'cards' => [
                 ['label' => "Total Penduduk Pindah Tahun {$year}", 'value' => (clone $yearQuery)->count()],
             ],
-            'monthly' => $this->monthly($base, 'tanggal_pindah', $year),
+            'monthly' => $monthly,
             'monthlyTitle' => 'Jumlah Penduduk Pindah per Bulan',
             'regionTitle' => 'Jumlah Penduduk Pindah per Dusun',
-            'regionValues' => [],
+            'regionValues' => $perDusun,
+            ...($includeRecaps ? $this->eventTables('Penduduk Keluar', $perDusun, $monthly, $this->genderCounts($yearQuery, 'penduduk_pindahs')) : []),
         ];
     }
 
@@ -502,12 +584,9 @@ class StatistikKependudukanService
 
     private function allRegions(): array
     {
-        $access = app(WilayahAccess::class);
-        $desaIds = $access->unrestricted()
-            ? Dusun::withoutGlobalScope('wilayah')->distinct()->pluck('desa_id')
-            : $access->assignments()->pluck('desa_id')->filter()->unique()->values();
-
-        return $access->forSystem(fn () => Dusun::withoutGlobalScope('wilayah')->where('aktif', true)->whereIn('desa_id', $desaIds)->orderBy('nama')->get(['id', 'nama'])->map(fn ($item) => ['id' => $item->id, 'label' => $item->nama, 'level' => 'dusun'])->all());
+        return Dusun::query()->where('aktif', true)->orderBy('nama')->get(['id', 'nama'])
+            ->map(fn ($item) => ['id' => $item->id, 'label' => $item->nama, 'level' => 'dusun'])
+            ->all();
     }
 
     private function regionTitle(string $prefix): string
@@ -532,6 +611,8 @@ class StatistikKependudukanService
                 $query->join('kartu_keluargas as kk', 'kk.id', '=', $baseTable.'.kartu_keluarga_id');
             } elseif ($baseTable === 'anggota_kedatangan') {
                 $query->join('kartu_keluargas as kk', 'kk.id', '=', 'kd.kartu_keluarga_tujuan_id');
+            } elseif ($baseTable === 'anggota_perpindahan') {
+                $query->join('kartu_keluargas as kk', 'kk.id', '=', $baseTable.'.kartu_keluarga_asal_id');
             }
             $dimensionSource = 'kk';
         } elseif ($relationTable === 'penduduks') {
@@ -547,7 +628,8 @@ class StatistikKependudukanService
 
         $dimension = $dimensionSource.'.'.$column;
 
-        $rows = $query->selectRaw("{$dimension} AS region_id, COUNT(*) AS total")
+        $allowedRegionIds = collect($regions)->pluck('id');
+        $rows = $query->whereIn($dimension, $allowedRegionIds)->selectRaw("{$dimension} AS region_id, COUNT(*) AS total")
             ->groupBy($dimension)->pluck('total', 'region_id');
 
             return collect($regions)->map(fn ($region) => ['label' => $region['label'], 'value' => (int) ($rows[$region['id']] ?? 0)])->all();
