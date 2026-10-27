@@ -62,7 +62,7 @@ function DemographicChart({ title, data, bar = false }) {
     );
 }
 
-export default function PopulationStatistics({ statistics, years = [], selectedYear, path, showCharts = true }) {
+export default function PopulationStatistics({ statistics, years = [], selectedYear, path, showCharts = true, recapTab = 'rekap' }) {
     if (!statistics) return null;
 
     const monthlyData = (statistics.months || []).map((month, index) => ({
@@ -73,6 +73,10 @@ export default function PopulationStatistics({ statistics, years = [], selectedY
         label: item.label,
         total: Number(item.value || 0),
     }));
+
+    if (statistics.rekapTables) {
+        return <PendudukRecapTabs statistics={statistics} years={years} selectedYear={selectedYear} path={path} activeTab={recapTab} />;
+    }
 
     const changeYear = (event) => {
         const isDashboard = path === '/dashboard';
@@ -159,4 +163,34 @@ export default function PopulationStatistics({ statistics, years = [], selectedY
             )}
         </div>
     );
+}
+
+function PendudukRecapTabs({ statistics, years, selectedYear, path, activeTab }) {
+    const changeYear = (event) => router.get(path, { statistik_tahun: event.target.value }, {
+        only: ['statistics', 'statisticYears', 'statisticYear'],
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+    const tables = activeTab === 'rekap' ? statistics.rekapTables : statistics.grafikTables;
+
+    return <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-600">Tahun statistik<select value={selectedYear || ''} onChange={changeYear} className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700">{years.map((year) => <option key={year} value={year}>{year}</option>)}</select></label>
+        </div>
+        {activeTab === 'rekap' && <RecapTable title="Rekap Total Penduduk" columns={['Keterangan', 'Jumlah']} rows={(statistics.cards || []).map((card) => ({ label: card.label, total: Number(card.value || 0) }))} />}
+        {tables.map((table) => <RecapTable key={table.title} {...table} />)}
+    </section>;
+}
+
+function RecapTable({ title, columns = [], rows = [] }) {
+    return <div className="overflow-hidden rounded-lg border border-slate-200">
+        <h2 className="bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800">{title}</h2>
+        <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+                <thead><tr className="bg-white">{columns.map((column) => <th key={column} className="border-y border-slate-200 px-4 py-2 text-left font-semibold text-slate-600">{column}</th>)}</tr></thead>
+                <tbody>{rows.length ? rows.map((row, index) => <tr key={`${row.label}-${index}`} className={row.label === 'TOTAL' ? 'bg-cyan-50 font-bold text-slate-800' : 'text-slate-700'}>{columns.map((column, columnIndex) => <td key={column} className={`border-b border-slate-100 px-4 py-2 ${columnIndex > 0 ? 'text-right tabular-nums' : ''}`}>{columnIndex === 0 ? row.label : numberFormatter.format(Number(row[column] ?? (['Jumlah Penduduk', 'Jumlah', 'Total'].includes(column) ? row.total : 0)))}</td>)}</tr>) : <tr><td className="px-4 py-5 text-center text-slate-500" colSpan={columns.length}>Belum ada data dalam cakupan penugasan.</td></tr>}</tbody>
+            </table>
+        </div>
+    </div>;
 }

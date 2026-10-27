@@ -215,6 +215,25 @@ class PopulationController extends ApiController
             if ($module === 'penduduk' || $module === 'kartu-keluarga') $query->where($field, $request->input($field));
             elseif ($direct) $query->whereHas($direct, fn ($relationQuery) => $relationQuery->where($field, $request->input($field)));
         }
+        if ($module === 'penduduk') {
+            foreach (['golongan_darah', 'agama', 'pendidikan_id', 'pekerjaan_id'] as $field) {
+                if ($request->filled($field)) $query->where($field, $request->input($field));
+            }
+            if ($request->filled('usia')) {
+                if (preg_match('/^(\\d+)-(\\d+)$/', (string) $request->input('usia'), $matches)) {
+                    $minAge = (int) $matches[1];
+                    $maxAge = (int) $matches[2];
+                    $query->whereNotNull('tanggal_lahir')
+                        ->whereDate('tanggal_lahir', '>', now()->subYears($maxAge + 1)->toDateString())
+                        ->whereDate('tanggal_lahir', '<=', now()->subYears($minAge)->toDateString());
+                } elseif ($request->input('usia') === '60+') {
+                    $query->whereNotNull('tanggal_lahir')->whereDate('tanggal_lahir', '<=', now()->subYears(60)->toDateString());
+                }
+            }
+        }
+        if ($module === 'anggota-kartu-keluarga' && $request->filled('hubungan_keluarga')) {
+            $query->where('hubungan_keluarga', $request->input('hubungan_keluarga'));
+        }
         $statusField = match ($module) { 'penduduk' => 'status_penduduk', 'kartu-keluarga' => 'status', default => 'status' };
         if ($request->filled('status')) $query->where($statusField, $request->input('status'));
         $dateField = match ($module) { 'penduduk-datang' => 'tanggal_datang', 'penduduk-pindah' => 'tanggal_pindah', 'kematian' => 'tanggal_meninggal', 'kelahiran' => 'tanggal_lahir', default => null };

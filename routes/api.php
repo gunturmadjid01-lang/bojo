@@ -19,6 +19,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/dashboard', DashboardController::class);
         Route::get('/wilayah', [WilayahController::class, 'index']);
         Route::get('/kependudukan/options', PopulationOptionsController::class);
+        Route::get('/penduduk/statistik', \App\Http\Controllers\Api\PendudukStatisticsController::class);
         Route::get('/access/users', [AccessController::class, 'users']);
         Route::get('/access/roles', [AccessController::class, 'roles']);
         Route::post('/access/users', [AccessController::class, 'storeUser']);

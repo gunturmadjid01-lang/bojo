@@ -36,12 +36,13 @@ export function TableActionButtons({ item, detailHref, editHref, onDelete, label
     );
 }
 
-export default function ResourceDataTable({ data = [], columns, searchFields = [], searchPlaceholder = 'Cari data...', emptyMessage = 'Data tidak ditemukan.', detailHref, editHref, onDelete, itemLabel = (item) => item.nama ?? item.name ?? item.id, showActions = true, filters = true }) {
+export default function ResourceDataTable({ data = [], columns, searchFields = [], searchPlaceholder = 'Cari data...', emptyMessage = 'Data tidak ditemukan.', detailHref, editHref, onDelete, itemLabel = (item) => item.nama ?? item.name ?? item.id, showActions = true, filters = true, extraFilters = [] }) {
     const [search, setSearch] = useState('');
     const [filterOpen, setFilterOpen] = useState(false);
     const [filter, setFilter] = useState({ dusun: '', rw: '', rt: '', status: '', dateFrom: '', dateTo: '' });
     const values = (field) => [...new Set(data.map((item) => item?.[field]?.nama || item?.[field]?.nomor || item?.[field]).filter(Boolean))].sort();
     const filterOptions = { dusun: values('dusun'), rw: values('rw'), rt: values('rt'), status: [...new Set(data.map((item) => item?.status || item?.status_penduduk || item?.status_verifikasi).filter(Boolean))].sort() };
+    const extraFilterOptions = extraFilters.map((definition) => ({ ...definition, options: definition.options || [...new Set(data.map((item) => definition.getValue?.(item)).filter(Boolean))].sort() }));
 
     const filteredData = useMemo(() => {
         const term = search.trim().toLowerCase();
@@ -49,9 +50,21 @@ export default function ResourceDataTable({ data = [], columns, searchFields = [
             const matchesSearch = !term || searchFields.some((field) => String(typeof field === 'function' ? field(item) : item[field] ?? '').toLowerCase().includes(term));
             const date = Object.entries(item).find(([key, value]) => /^tanggal_/.test(key) && value)?.[1] || item.created_at || '';
             const status = item?.status || item?.status_penduduk || item?.status_verifikasi || '';
-            return matchesSearch && (!filter.dusun || String(item?.dusun?.nama || item?.dusun || '') === filter.dusun) && (!filter.rw || String(item?.rw?.nomor || item?.rw || '') === filter.rw) && (!filter.rt || String(item?.rt?.nomor || item?.rt || '') === filter.rt) && (!filter.status || status === filter.status) && (!filter.dateFrom || date.slice(0, 10) >= filter.dateFrom) && (!filter.dateTo || date.slice(0, 10) <= filter.dateTo);
+            const matchesExtraFilters = extraFilters.every((definition) => {
+                const selected = filter[definition.key];
+                if (!selected) return true;
+                const actual = definition.getValue?.(item);
+                if (definition.key === 'usia') {
+                    if (actual === null || actual === undefined) return false;
+                    if (selected === '60+') return actual >= 60;
+                    const [min, max] = selected.split('-').map(Number);
+                    return actual >= min && actual <= max;
+                }
+                return String(actual ?? '') === String(selected);
+            });
+            return matchesSearch && matchesExtraFilters && (!filter.dusun || String(item?.dusun?.nama || item?.dusun || '') === filter.dusun) && (!filter.rw || String(item?.rw?.nomor || item?.rw || '') === filter.rw) && (!filter.rt || String(item?.rt?.nomor || item?.rt || '') === filter.rt) && (!filter.status || status === filter.status) && (!filter.dateFrom || date.slice(0, 10) >= filter.dateFrom) && (!filter.dateTo || date.slice(0, 10) <= filter.dateTo);
         });
-    }, [data, search, searchFields, filter]);
+    }, [data, search, searchFields, filter, extraFilters]);
 
     const actionColumn = {
         name: 'Aksi',
@@ -71,11 +84,11 @@ export default function ResourceDataTable({ data = [], columns, searchFields = [
                 </label>
                 {filters && <button type="button" onClick={() => setFilterOpen((value) => !value)} className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600">Filter</button>}
             </div>
-            {filters && filterOpen && <div className="grid gap-3 border-b border-slate-100 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-6"><FilterSelect label="Dusun" value={filter.dusun} options={filterOptions.dusun} onChange={(value) => setFilter((current) => ({ ...current, dusun: value }))} /><FilterSelect label="RW" value={filter.rw} options={filterOptions.rw} onChange={(value) => setFilter((current) => ({ ...current, rw: value }))} /><FilterSelect label="RT" value={filter.rt} options={filterOptions.rt} onChange={(value) => setFilter((current) => ({ ...current, rt: value }))} /><FilterSelect label="Status" value={filter.status} options={filterOptions.status} onChange={(value) => setFilter((current) => ({ ...current, status: value }))} /><DateFilter label="Dari tanggal" value={filter.dateFrom} onChange={(value) => setFilter((current) => ({ ...current, dateFrom: value }))} /><DateFilter label="Sampai tanggal" value={filter.dateTo} onChange={(value) => setFilter((current) => ({ ...current, dateTo: value }))} /></div>}
+            {filters && filterOpen && <div className="grid gap-3 border-b border-slate-100 bg-slate-50 p-4 sm:grid-cols-2 lg:grid-cols-6"><FilterSelect label="Dusun" value={filter.dusun} options={filterOptions.dusun} onChange={(value) => setFilter((current) => ({ ...current, dusun: value }))} /><FilterSelect label="RW" value={filter.rw} options={filterOptions.rw} onChange={(value) => setFilter((current) => ({ ...current, rw: value }))} /><FilterSelect label="RT" value={filter.rt} options={filterOptions.rt} onChange={(value) => setFilter((current) => ({ ...current, rt: value }))} /><FilterSelect label="Status" value={filter.status} options={filterOptions.status} onChange={(value) => setFilter((current) => ({ ...current, status: value }))} /><DateFilter label="Dari tanggal" value={filter.dateFrom} onChange={(value) => setFilter((current) => ({ ...current, dateFrom: value }))} /><DateFilter label="Sampai tanggal" value={filter.dateTo} onChange={(value) => setFilter((current) => ({ ...current, dateTo: value }))} />{extraFilterOptions.map((definition) => <FilterSelect key={definition.key} label={definition.label} value={filter[definition.key] || ''} options={definition.options} onChange={(value) => setFilter((current) => ({ ...current, [definition.key]: value }))} />)}</div>}
             <DataTable columns={showActions ? [...columns, actionColumn] : columns} data={filteredData} keyField="id" customStyles={tableStyles} pagination paginationPerPage={10} paginationRowsPerPageOptions={[10, 25, 50, 100]} noDataComponent={<p className="py-10 text-sm text-slate-500">{emptyMessage}</p>} />
         </div>
     );
 }
 
-function FilterSelect({ label, value, options, onChange }) { return <label className="text-xs font-medium text-slate-600">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-2 text-sm"><option value="">Semua</option>{options.map((option) => <option key={`${label}-${option}`} value={option}>{option}</option>)}</select></label>; }
+function FilterSelect({ label, value, options, onChange }) { return <label className="text-xs font-medium text-slate-600">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-2 text-sm"><option value="">Semua</option>{options.map((option) => <option key={`${label}-${typeof option === 'object' ? option.value : option}`} value={typeof option === 'object' ? option.value : option}>{typeof option === 'object' ? option.label : option}</option>)}</select></label>; }
 function DateFilter({ label, value, onChange }) { return <label className="text-xs font-medium text-slate-600">{label}<input type="date" value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-2 text-sm" /></label>; }

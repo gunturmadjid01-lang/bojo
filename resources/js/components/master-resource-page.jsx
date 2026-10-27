@@ -1,5 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
+import { useState } from 'react';
 import VillageDashboardLayout from '@/layouts/village-dashboard-layout';
 import { canAccessHref } from '@/lib/permissions';
 import ResourceDataTable from './resource-data-table';
@@ -8,6 +9,8 @@ import PopulationStatistics from './population-statistics';
 export default function MasterResourcePage({ title, group = 'Master Data', createHref, createLabel, canCreateOverride, showStatistics = true, showStatisticCharts = true, ...tableProps }) {
     const { props } = usePage();
     const user = props?.auth?.user;
+    const [indexTab, setIndexTab] = useState('data');
+    const hasPendudukTables = Boolean(props?.statistics?.rekapTables);
     const canCreate = canCreateOverride ?? (createHref ? canAccessHref(user, createHref, 'create') : false);
 
     return (
@@ -25,16 +28,20 @@ export default function MasterResourcePage({ title, group = 'Master Data', creat
                         </Link>
                     )}
                 </div>
-                {showStatistics && (
+                {hasPendudukTables && <div className="flex flex-wrap gap-2" role="tablist" aria-label="Data dan statistik penduduk">
+                    {[['data', 'Data'], ['rekap', 'Rekap'], ['grafik', 'Grafik']].map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={indexTab === key} onClick={() => setIndexTab(key)} className={`rounded-md px-4 py-2 text-sm font-semibold ${indexTab === key ? 'bg-cyan-600 text-white' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>{label}</button>)}
+                </div>}
+                {showStatistics && (!hasPendudukTables || indexTab !== 'data') && (
                     <PopulationStatistics
                         statistics={props?.statistics}
                         years={props?.statisticYears}
                         selectedYear={props?.statisticYear}
                         path={typeof window !== 'undefined' ? window.location.pathname : ''}
                         showCharts={showStatisticCharts}
+                        recapTab={indexTab}
                     />
                 )}
-                <ResourceDataTable {...tableProps} />
+                {(!hasPendudukTables || indexTab === 'data') && <ResourceDataTable {...tableProps} />}
             </section>
         </VillageDashboardLayout>
     );

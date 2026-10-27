@@ -17,6 +17,22 @@ const formatLabel = (value) => {
     return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 };
 
+const usiaTahun = (tanggalLahir) => {
+    if (!tanggalLahir) return null;
+    const [tahun, bulan, hari] = String(tanggalLahir).slice(0, 10).split('-').map(Number);
+    if (!tahun || !bulan || !hari) return null;
+    const sekarang = new Date();
+    let usia = sekarang.getFullYear() - tahun;
+    if (sekarang.getMonth() + 1 < bulan || (sekarang.getMonth() + 1 === bulan && sekarang.getDate() < hari)) usia -= 1;
+    return usia >= 0 ? usia : null;
+};
+
+const rentangUsia = [
+    { value: '0-5', label: '0–5 tahun' }, { value: '6-12', label: '6–12 tahun' },
+    { value: '13-17', label: '13–17 tahun' }, { value: '18-25', label: '18–25 tahun' },
+    { value: '26-59', label: '26–59 tahun' }, { value: '60+', label: '60 tahun ke atas' },
+];
+
 const formatRtRw = (item) => {
     const rt = item.rt?.nomor ? `RT ${item.rt.nomor}` : 'RT -';
     const rw = item.rw?.nomor ? `RW ${item.rw.nomor}` : 'RW -';
@@ -46,6 +62,13 @@ export default function PendudukIndex({ penduduks = [] }) {
                 (item) => item.rw?.nomor,
             ]}
             searchPlaceholder="Cari penduduk..."
+            extraFilters={[
+                { key: 'golonganDarah', label: 'Golongan Darah', options: ['A', 'B', 'AB', 'O'], getValue: (item) => item.golongan_darah },
+                { key: 'agama', label: 'Agama', getValue: (item) => item.agama },
+                { key: 'pendidikan', label: 'Pendidikan', getValue: (item) => item.pendidikan?.nama },
+                { key: 'pekerjaan', label: 'Pekerjaan', getValue: (item) => item.pekerjaan?.nama },
+                { key: 'usia', label: 'Usia', options: rentangUsia, getValue: (item) => usiaTahun(item.tanggal_lahir) },
+            ]}
             emptyMessage="Data penduduk tidak ditemukan."
             itemLabel={(item) => `${item.nama_lengkap} (${item.nik})`}
             detailHref={(item) => `/penduduk/${item.id}`}
@@ -64,6 +87,12 @@ export default function PendudukIndex({ penduduks = [] }) {
                             <p className="mt-0.5 text-xs text-slate-500">NIK {item.nik || '-'}</p>
                         </div>
                     ),
+                },
+                {
+                    name: 'Usia',
+                    selector: (item) => usiaTahun(item.tanggal_lahir) === null ? '-' : `${usiaTahun(item.tanggal_lahir)} tahun`,
+                    sortable: true,
+                    minWidth: '100px',
                 },
                 {
                     name: 'Jenis Kelamin',

@@ -3,6 +3,16 @@ import { ArrowLeft, UserRound, Pencil } from 'lucide-react';
 import VillageDashboardLayout from '@/layouts/village-dashboard-layout';
 import { canAccessHref } from '@/lib/permissions';
 
+const usiaTahun = (tanggalLahir) => {
+    if (!tanggalLahir) return null;
+    const [tahun, bulan, hari] = String(tanggalLahir).slice(0, 10).split('-').map(Number);
+    if (!tahun || !bulan || !hari) return null;
+    const sekarang = new Date();
+    let usia = sekarang.getFullYear() - tahun;
+    if (sekarang.getMonth() + 1 < bulan || (sekarang.getMonth() + 1 === bulan && sekarang.getDate() < hari)) usia -= 1;
+    return usia >= 0 ? usia : null;
+};
+
 export default function PendudukShow({ penduduk }) {
     const { props } = usePage();
     const user = props?.auth?.user;
@@ -35,6 +45,7 @@ export default function PendudukShow({ penduduk }) {
                         <div><p className="text-xs uppercase tracking-wide text-slate-400">NIK</p><p className="mt-1 font-medium text-slate-800">{penduduk.nik || '-'}</p></div>
                         <div><p className="text-xs uppercase tracking-wide text-slate-400">Nama</p><p className="mt-1 font-medium text-slate-800">{penduduk.nama_lengkap || '-'}</p></div>
                         <div><p className="text-xs uppercase tracking-wide text-slate-400">Jenis Kelamin</p><p className="mt-1 font-medium text-slate-800">{penduduk.jenis_kelamin || '-'}</p></div>
+                        <div><p className="text-xs uppercase tracking-wide text-slate-400">Usia</p><p className="mt-1 font-medium text-slate-800">{usiaTahun(penduduk.tanggal_lahir) === null ? '-' : `${usiaTahun(penduduk.tanggal_lahir)} tahun`}</p></div>
                         <div><p className="text-xs uppercase tracking-wide text-slate-400">Tempat, Tanggal Lahir</p><p className="mt-1 font-medium text-slate-800">{[penduduk.tempat_lahir, penduduk.tanggal_lahir].filter(Boolean).join(', ') || '-'}</p></div>
                         <div><p className="text-xs uppercase tracking-wide text-slate-400">Agama</p><p className="mt-1 font-medium text-slate-800">{penduduk.agama || '-'}</p></div>
                         <div><p className="text-xs uppercase tracking-wide text-slate-400">Pendidikan</p><p className="mt-1 font-medium text-slate-800">{penduduk.pendidikan?.nama || '-'}</p></div>

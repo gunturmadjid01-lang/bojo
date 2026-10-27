@@ -12,6 +12,7 @@ export default function AnggotaKartuKeluargaIndex({ anggotaKartuKeluargas = [] }
             data={anggotaKartuKeluargas}
             searchFields={['hubungan_keluarga', 'alasan_keluar']}
             searchPlaceholder="Cari anggota keluarga..."
+            extraFilters={[{ key: 'hubungan', label: 'Hubungan', getValue: (item) => item.hubungan_keluarga }]}
             emptyMessage="Data anggota keluarga tidak ditemukan."
             itemLabel={(item) => `${item.penduduk?.nama_lengkap || '-'} / ${item.kartu_keluarga?.nomor_kk || '-'}`}
             detailHref={(item) => `/anggota-kartu-keluarga/${item.id}`}

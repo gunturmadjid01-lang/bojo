@@ -12,15 +12,15 @@ class StatistikKependudukanService
 {
     public const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
-    public function for(string $module, User $user, ?int $year = null): array
+    public function for(string $module, User $user, ?int $year = null, bool $includeRecaps = false): array
     {
         $year ??= now()->year;
 
-        return app(WilayahAccess::class)->forUser($user, function () use ($module, $year): array {
+        return app(WilayahAccess::class)->forUser($user, function () use ($module, $year, $includeRecaps): array {
             return match ($module) {
                 'kartu-keluarga' => $this->kartuKeluarga($year),
 
-                'penduduk' => $this->penduduk($year),
+                'penduduk' => $this->penduduk($year, $includeRecaps),
                 'kelahiran' => $this->kelahiran($year),
                 'kematian' => $this->kematian($year),
                 'penduduk-datang' => $this->pendudukDatang($year),
@@ -46,7 +46,7 @@ class StatistikKependudukanService
         $year = in_array($requestedYear, $years, true) ? $requestedYear : now()->year;
 
         return [
-            'statistics' => $this->for($module, $request->user(), $year),
+            'statistics' => $this->for($module, $request->user(), $year, $module === 'penduduk'),
             'statisticYears' => $years,
             'statisticYear' => $year,
         ];
@@ -73,7 +73,7 @@ class StatistikKependudukanService
 
 
 
-    private function penduduk(int $year): array
+    private function penduduk(int $year, bool $includeRecaps = false): array
     {
         $active = Penduduk::query()->where('status_penduduk', 'aktif')->where('masih_hidup', true);
         $productive = $this->ageQuery(clone $active, 15, 64);
@@ -112,6 +112,64 @@ class StatistikKependudukanService
                 'Status Perkawinan' => $this->groupedString(clone $active, 'status_perkawinan')
             ],
             'demographicsByRegion' => $this->pendudukDemographicsByRegion(),
+            ...($includeRecaps ? $this->pendudukRecapTables() : []),
+        ];
+    }
+
+    private function pendudukRecapTables(): array
+    {
+        $people = Penduduk::query()
+            ->with(['dusun:id,nama', 'pendidikan:id,nama', 'pekerjaan:id,nama'])
+            ->where('status_penduduk', 'aktif')
+            ->where('masih_hidup', true)
+            ->get();
+        $dusuns = Dusun::query()->where('aktif', true)->orderBy('nama')->get(['id', 'nama']);
+        $peopleByDusun = $people->groupBy(fn (Penduduk $person) => $person->dusun_id ? (int) $person->dusun_id : 'unknown');
+        $groups = $dusuns->mapWithKeys(fn (Dusun $dusun) => [$dusun->id => $peopleByDusun->get($dusun->id, collect())]);
+        if ($peopleByDusun->has('unknown')) $groups->put('unknown', $peopleByDusun->get('unknown'));
+        $regionLabels = $dusuns->mapWithKeys(fn (Dusun $dusun) => [$dusun->id => $dusun->nama]);
+        if ($peopleByDusun->has('unknown')) $regionLabels->put('unknown', 'Belum Diketahui');
+        $columnsFor = fn (callable $resolve): array => $people->map(fn (Penduduk $person) => $resolve($person))
+            ->unique()->sort()->values()->all();
+        $crossTab = function (string $title, callable $resolve, ?array $preferredCategories = null) use ($people, $groups, $regionLabels, $columnsFor): array {
+            $available = $columnsFor($resolve);
+            $categories = $preferredCategories ? array_values(array_intersect($preferredCategories, $available)) : $available;
+            $rows = $groups->map(function ($residents, $region) use ($categories, $resolve, $regionLabels): array {
+                $row = ['label' => $regionLabels->get($region, 'Belum Diketahui')];
+                foreach ($categories as $category) {
+                    $row[$category] = $residents->filter(fn (Penduduk $person) => $resolve($person) === $category)->count();
+                }
+                $row['total'] = $residents->count();
+                return $row;
+            })->values()->all();
+            $totalRow = ['label' => 'TOTAL'];
+            foreach ($categories as $category) $totalRow[$category] = $people->filter(fn (Penduduk $person) => $resolve($person) === $category)->count();
+            $totalRow['total'] = $people->count();
+
+            return ['title' => $title, 'columns' => ['Dusun', ...$categories, 'Total'], 'rows' => [...$rows, $totalRow]];
+        };
+        $unknown = fn (?string $value): string => filled(trim((string) $value)) ? trim((string) $value) : 'Belum Diketahui';
+        $ageGroup = fn (Penduduk $person): string => $person->tanggal_lahir
+            ? $this->ageBand($person->tanggal_lahir)
+            : 'Belum Diketahui';
+        $totalByDusun = [
+            'title' => 'Rekap Penduduk Per Dusun',
+            'columns' => ['Dusun', 'Jumlah Penduduk'],
+            'rows' => $groups->map(fn ($residents, $region) => ['label' => $regionLabels->get($region, 'Belum Diketahui'), 'total' => $residents->count()])->values()->all(),
+        ];
+        $totalByDusun['rows'][] = ['label' => 'TOTAL', 'total' => $people->count()];
+
+        return [
+            'rekapTables' => [$totalByDusun],
+            'grafikTables' => [
+                $crossTab('Rekap Jenis Kelamin Per Dusun', fn (Penduduk $person) => $unknown($person->jenis_kelamin)),
+                $crossTab('Rekap Pendidikan Per Dusun', fn (Penduduk $person) => $unknown($person->pendidikan?->nama)),
+                $crossTab('Rekap Pekerjaan Per Dusun', fn (Penduduk $person) => $unknown($person->pekerjaan?->nama)),
+                $crossTab('Rekap Golongan Darah Per Dusun', fn (Penduduk $person) => $unknown($person->golongan_darah)),
+                $crossTab('Rekap Agama Per Dusun', fn (Penduduk $person) => $unknown($person->agama)),
+                $crossTab('Rekap Status Perkawinan Per Dusun', fn (Penduduk $person) => $unknown($person->status_perkawinan)),
+                $crossTab('Rekap Kelompok Usia Per Dusun', $ageGroup, ['0-5 tahun', '6-12 tahun', '13-17 tahun', '18-25 tahun', '26-40 tahun', '41-59 tahun', '60+ tahun', 'Belum Diketahui']),
+            ],
         ];
     }
 
@@ -203,21 +261,12 @@ class StatistikKependudukanService
 
     private function pendudukPerDusun(): array
     {
-        $access = app(WilayahAccess::class);
-        $assignments = $access->assignments();
-        $desaIds = $access->unrestricted()
-            ? Dusun::withoutGlobalScope('wilayah')->distinct()->pluck('desa_id')
-            : $assignments->pluck('desa_id')->filter()->unique()->values();
+        $dusuns = Dusun::query()->where('aktif', true)->orderBy('nama')->get(['id', 'nama']);
+        if ($dusuns->isEmpty()) return [];
+        $rows = Penduduk::query()->where('status_penduduk', 'aktif')->where('masih_hidup', true)
+            ->whereIn('dusun_id', $dusuns->pluck('id'))->selectRaw('dusun_id, COUNT(*) AS value')->groupBy('dusun_id')->pluck('value', 'dusun_id');
 
-        if ($desaIds->isEmpty()) return [];
-
-        return app(WilayahAccess::class)->forSystem(function () use ($desaIds): array {
-            $dusuns = Dusun::withoutGlobalScope('wilayah')->where('aktif', true)->whereIn('desa_id', $desaIds)->orderBy('nama')->get(['id', 'nama']);
-            $rows = Penduduk::withoutGlobalScopes()->where('status_penduduk', 'aktif')->where('masih_hidup', true)
-                ->whereIn('dusun_id', $dusuns->pluck('id'))->selectRaw('dusun_id, COUNT(*) AS value')->groupBy('dusun_id')->pluck('value', 'dusun_id');
-
-            return $dusuns->map(fn ($dusun) => ['label' => $dusun->nama, 'value' => (int) ($rows[$dusun->id] ?? 0)])->all();
-        });
+        return $dusuns->map(fn ($dusun) => ['label' => $dusun->nama, 'value' => (int) ($rows[$dusun->id] ?? 0)])->all();
     }
 
     private function kelahiran(int $year): array
