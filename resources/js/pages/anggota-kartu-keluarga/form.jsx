@@ -22,7 +22,13 @@ export default function AnggotaKartuKeluargaForm({
   const editing = Boolean(anggotaKartuKeluarga);
   const { data, setData, post, put, processing, errors } = useForm({
     ...defaultForm,
-    ...(anggotaKartuKeluarga || {}),
+    ...(anggotaKartuKeluarga ? {
+      ...anggotaKartuKeluarga,
+      kartu_keluarga_id: String(anggotaKartuKeluarga.kartu_keluarga_id || ""),
+      penduduk_id: String(anggotaKartuKeluarga.penduduk_id || ""),
+      tanggal_masuk: anggotaKartuKeluarga.tanggal_masuk?.slice(0, 10) || "",
+      tanggal_keluar: anggotaKartuKeluarga.tanggal_keluar?.slice(0, 10) || "",
+    } : {}),
   });
 
   const inputClass = (

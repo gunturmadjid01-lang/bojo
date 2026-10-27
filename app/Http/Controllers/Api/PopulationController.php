@@ -169,6 +169,23 @@ class PopulationController extends ApiController
                 unset($data['penduduk']);
                 $item->penduduk()->update($personData);
                 $item->update($data);
+            } elseif ($module === 'anggota-kartu-keluarga') {
+                DB::transaction(function () use ($data, $item): void {
+                    $isActive = (bool) ($data['aktif'] ?? $item->aktif);
+                    if ($isActive) {
+                        $duplicate = AnggotaKartuKeluarga::query()->where('penduduk_id', $data['penduduk_id'])
+                            ->where('aktif', true)->where('id', '!=', $item->id)->lockForUpdate()->exists();
+                        if ($duplicate) {
+                            throw ValidationException::withMessages(['penduduk_id' => 'Penduduk sudah terdaftar sebagai anggota aktif pada kartu keluarga lain.']);
+                        }
+                        if (($data['hubungan_keluarga'] ?? $item->hubungan_keluarga) === 'Kepala Keluarga' && AnggotaKartuKeluarga::query()
+                            ->where('kartu_keluarga_id', $data['kartu_keluarga_id'])->where('hubungan_keluarga', 'Kepala Keluarga')
+                            ->where('aktif', true)->where('id', '!=', $item->id)->lockForUpdate()->exists()) {
+                            throw ValidationException::withMessages(['hubungan_keluarga' => 'Kartu keluarga ini sudah memiliki kepala keluarga aktif.']);
+                        }
+                    }
+                    $item->update($data);
+                });
             } else {
                 $item->update($data);
             }
@@ -327,7 +344,7 @@ class PopulationController extends ApiController
         return match ($module) {
             'penduduk' => ['id' => $item->id, 'nik' => $item->nik, 'nama_lengkap' => $item->nama_lengkap, 'tempat_lahir' => $item->tempat_lahir, 'tanggal_lahir' => $item->tanggal_lahir?->toDateString(), 'jenis_kelamin' => $item->jenis_kelamin, 'agama' => $item->agama, 'golongan_darah' => $item->golongan_darah, 'status_perkawinan' => $item->status_perkawinan, 'pendidikan_id' => $item->pendidikan_id, 'pekerjaan_id' => $item->pekerjaan_id, 'pendidikan' => $item->pendidikan?->only(['id', 'nama']), 'pekerjaan' => $item->pekerjaan?->only(['id', 'nama']), 'kewarganegaraan' => $item->kewarganegaraan, 'nama_ayah' => $item->nama_ayah, 'nama_ibu' => $item->nama_ibu, 'telepon' => $item->telepon, 'alamat' => $item->alamat, 'dusun_id' => $item->dusun_id, 'rw_id' => $item->rw_id, 'rt_id' => $item->rt_id, 'wilayah' => ['dusun' => $item->dusun?->only(['id', 'nama']), 'rw' => $item->rw?->only(['id', 'nomor']), 'rt' => $item->rt?->only(['id', 'nomor'])], 'status_penduduk' => $item->status_penduduk, 'masih_hidup' => $item->masih_hidup],
             'kartu-keluarga' => ['id' => $item->id, 'nomor_kk' => $item->nomor_kk, 'alamat' => $item->alamat, 'kode_pos' => $item->kode_pos, 'tanggal_diterbitkan' => $item->tanggal_diterbitkan?->toDateString(), 'status' => $item->status, 'desa' => $item->desa?->only(['id', 'nama_desa']), 'dusun' => $item->dusun?->only(['id', 'nama']), 'rw' => $item->rw?->only(['id', 'nomor']), 'rt' => $item->rt?->only(['id', 'nomor']), 'anggota' => $item->anggotaKeluarga?->values()->all() ?? []],
-            'anggota-kartu-keluarga' => ['id' => $item->id, 'hubungan_keluarga' => $item->hubungan_keluarga, 'tanggal_masuk' => $item->tanggal_masuk?->toDateString(), 'tanggal_keluar' => $item->tanggal_keluar?->toDateString(), 'aktif' => $item->aktif, 'alasan_keluar' => $item->alasan_keluar, 'kartu_keluarga' => $item->kartuKeluarga?->only(['id', 'nomor_kk']), 'penduduk' => $item->penduduk?->only(['id', 'nik', 'nama_lengkap', 'jenis_kelamin']), 'wilayah' => ['dusun' => $item->kartuKeluarga?->dusun?->only(['id', 'nama']), 'rw' => $item->kartuKeluarga?->rw?->only(['id', 'nomor']), 'rt' => $item->kartuKeluarga?->rt?->only(['id', 'nomor'])]],
+            'anggota-kartu-keluarga' => ['id' => $item->id, 'kartu_keluarga_id' => $item->kartu_keluarga_id, 'penduduk_id' => $item->penduduk_id, 'hubungan_keluarga' => $item->hubungan_keluarga, 'tanggal_masuk' => $item->tanggal_masuk?->toDateString(), 'tanggal_keluar' => $item->tanggal_keluar?->toDateString(), 'aktif' => $item->aktif, 'alasan_keluar' => $item->alasan_keluar, 'kartu_keluarga' => $item->kartuKeluarga?->only(['id', 'nomor_kk']), 'penduduk' => $item->penduduk?->only(['id', 'nik', 'nama_lengkap', 'jenis_kelamin']), 'wilayah' => ['dusun' => $item->kartuKeluarga?->dusun?->only(['id', 'nama']), 'rw' => $item->kartuKeluarga?->rw?->only(['id', 'nomor']), 'rt' => $item->kartuKeluarga?->rt?->only(['id', 'nomor'])]],
             'kelahiran' => ['id' => $item->id, 'penduduk_id' => $item->penduduk_id, 'kartu_keluarga_id' => $item->kartu_keluarga_id, 'ayah_id' => $item->ayah_id, 'ibu_id' => $item->ibu_id, 'penduduk' => $item->penduduk?->only(['id', 'nik', 'nama_lengkap']), 'kartu_keluarga' => $item->kartuKeluarga?->only(['id', 'nomor_kk']), 'ayah' => $item->ayah?->only(['id', 'nik', 'nama_lengkap']), 'ibu' => $item->ibu?->only(['id', 'nik', 'nama_lengkap']), 'nama_lengkap' => $item->penduduk?->nama_lengkap, 'nik' => $item->penduduk?->nik, 'jenis_kelamin' => $item->penduduk?->jenis_kelamin, 'tempat_lahir' => $item->tempat_lahir, 'tanggal_lahir' => $item->tanggal_lahir?->toDateString(), 'waktu_lahir' => $item->waktu_lahir, 'nomor_akta_kelahiran' => $item->nomor_akta_kelahiran, 'tanggal_akta_kelahiran' => $item->tanggal_akta_kelahiran?->toDateString(), 'anak_ke' => $item->anak_ke, 'berat_lahir' => $item->berat_lahir, 'panjang_lahir' => $item->panjang_lahir, 'tanggal_dilaporkan' => $item->tanggal_dilaporkan?->toDateString(), 'catatan' => $item->catatan],
             'kematian' => ['id' => $item->id, 'penduduk_id' => $item->penduduk_id, 'penduduk' => $item->penduduk?->only(['id', 'nik', 'nama_lengkap']), 'tanggal_meninggal' => $item->tanggal_meninggal?->toDateString(), 'waktu_meninggal' => $item->waktu_meninggal, 'tempat_meninggal' => $item->tempat_meninggal, 'penyebab_meninggal' => $item->penyebab_meninggal, 'nomor_surat_kematian' => $item->nomor_surat_kematian, 'tanggal_dilaporkan' => $item->tanggal_dilaporkan?->toDateString(), 'catatan' => $item->catatan],
             'penduduk-datang' => $this->arrivalPayload($item),

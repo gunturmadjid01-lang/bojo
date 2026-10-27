@@ -104,7 +104,7 @@ class StatistikKependudukanService
             'regionValues' => $this->pendudukPerDusun(),
             'demographics' => [
                 'Usia' => $this->ageGroups(clone $active),
-                'Kelamin' => $this->groupedString(clone $active, 'jenis_kelamin'),
+                'Jenis Kelamin' => $this->groupedString(clone $active, 'jenis_kelamin'),
                 'Goldar' => $this->groupedString(clone $active, 'golongan_darah'),
                 'Agama' => $this->groupedString(clone $active, 'agama'),
                 'Pendidikan' => $this->groupedMaster(clone $active, Pendidikan::class, 'pendidikan_id'),
@@ -291,12 +291,12 @@ class StatistikKependudukanService
 
         return [
             'cards' => [
-                ['label' => "Total Penduduk Keluar Tahun {$year}", 'value' => (clone $members)->count()],
-                ['label' => 'Penduduk Keluar Bulan Ini', 'value' => (clone $members)->whereHas('perpindahan', fn ($q) => $q->whereMonth('tanggal_pindah', now()->month)->whereYear('tanggal_pindah', $year))->count()],
+                ['label' => "Total Penduduk Pindah Tahun {$year}", 'value' => (clone $members)->count()],
+                ['label' => 'Penduduk Pindah Bulan Ini', 'value' => (clone $members)->whereHas('perpindahan', fn ($q) => $q->whereMonth('tanggal_pindah', now()->month)->whereYear('tanggal_pindah', $year))->count()],
             ],
             'monthly' => $this->monthly($base, 'tanggal_pindah', $year),
-            'monthlyTitle' => 'Jumlah Penduduk Keluar per Bulan',
-            'regionTitle' => $this->regionTitle('Jumlah Penduduk Keluar'),
+            'monthlyTitle' => 'Jumlah Penduduk Pindah per Bulan',
+            'regionTitle' => $this->regionTitle('Jumlah Penduduk Pindah'),
             'regionValues' => $this->regionValues($yearQuery, 'penduduk_pindahs', 'penduduks'),
         ];
     }
@@ -308,11 +308,11 @@ class StatistikKependudukanService
 
         return [
             'cards' => [
-                ['label' => "Total Penduduk Keluar Tahun {$year}", 'value' => (clone $yearQuery)->count()],
+                ['label' => "Total Penduduk Pindah Tahun {$year}", 'value' => (clone $yearQuery)->count()],
             ],
             'monthly' => $this->monthly($base, 'tanggal_pindah', $year),
-            'monthlyTitle' => 'Jumlah Penduduk Keluar per Bulan',
-            'regionTitle' => 'Jumlah Penduduk Keluar per Dusun',
+            'monthlyTitle' => 'Jumlah Penduduk Pindah per Bulan',
+            'regionTitle' => 'Jumlah Penduduk Pindah per Dusun',
             'regionValues' => [],
         ];
     }

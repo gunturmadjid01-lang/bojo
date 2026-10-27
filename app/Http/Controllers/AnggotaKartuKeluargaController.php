@@ -120,10 +120,14 @@ class AnggotaKartuKeluargaController extends Controller
 
     public function edit(AnggotaKartuKeluarga $anggotaKartuKeluarga): Response
     {
+        $anggotaKartuKeluarga->load(['kartuKeluarga:id,nomor_kk', 'penduduk:id,nik,nama_lengkap']);
         return Inertia::render('anggota-kartu-keluarga/form', [
             'anggotaKartuKeluarga' => $anggotaKartuKeluarga,
-            'kartuKeluargas' => KartuKeluarga::query()->with(['anggotaKeluarga' => fn ($query) => $query->where('aktif', true)->with('penduduk:id,nama_lengkap')])->orderBy('nomor_kk')->get(['id', 'nomor_kk', 'alamat']),
-            'penduduk' => Penduduk::query()->orderBy('nama_lengkap')->get(['id', 'nik', 'nama_lengkap']),
+            'kartuKeluargas' => KartuKeluarga::query()->where('status', 'aktif')->orderBy('nomor_kk')->get(['id', 'nomor_kk', 'alamat']),
+            'penduduk' => Penduduk::query()->where(function ($query) use ($anggotaKartuKeluarga) {
+                $query->whereDoesntHave('anggotaKartuKeluarga', fn ($membership) => $membership->where('aktif', true))
+                    ->orWhereKey($anggotaKartuKeluarga->penduduk_id);
+            })->orderBy('nama_lengkap')->get(['id', 'nik', 'nama_lengkap']),
         ]);
     }
 
@@ -132,16 +136,29 @@ class AnggotaKartuKeluargaController extends Controller
         $validated = $request->validate([
             'kartu_keluarga_id' => ['required', new \App\Rules\WilayahExists(\App\Models\KartuKeluarga::class)],
             'penduduk_id' => ['required', new \App\Rules\WilayahExists(\App\Models\Penduduk::class)],
-            'hubungan_keluarga' => ['required', 'string', 'max:50'],
+            'hubungan_keluarga' => ['required', Rule::in(['Kepala Keluarga', 'Suami', 'Istri', 'Anak', 'Menantu', 'Cucu', 'Orang Tua', 'Mertua', 'Famili Lain', 'Lainnya'])],
             'tanggal_masuk' => ['nullable', 'date'],
             'tanggal_keluar' => ['nullable', 'date'],
             'aktif' => ['nullable', 'boolean'],
             'alasan_keluar' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $validated['aktif'] = $validated['aktif'] ?? $anggotaKartuKeluarga->aktif ?? true;
-
-        $anggotaKartuKeluarga->update($validated);
+        DB::transaction(function () use ($validated, $anggotaKartuKeluarga): void {
+            $isActive = (bool) ($validated['aktif'] ?? $anggotaKartuKeluarga->aktif);
+            if ($isActive) {
+                $duplicate = AnggotaKartuKeluarga::query()->where('penduduk_id', $validated['penduduk_id'])
+                    ->where('aktif', true)->where('id', '!=', $anggotaKartuKeluarga->id)->lockForUpdate()->exists();
+                if ($duplicate) {
+                    throw ValidationException::withMessages(['penduduk_id' => 'Penduduk sudah terdaftar sebagai anggota aktif pada kartu keluarga lain.']);
+                }
+                if ($validated['hubungan_keluarga'] === 'Kepala Keluarga' && AnggotaKartuKeluarga::query()
+                    ->where('kartu_keluarga_id', $validated['kartu_keluarga_id'])->where('hubungan_keluarga', 'Kepala Keluarga')
+                    ->where('aktif', true)->where('id', '!=', $anggotaKartuKeluarga->id)->lockForUpdate()->exists()) {
+                    throw ValidationException::withMessages(['hubungan_keluarga' => 'Kartu keluarga ini sudah memiliki kepala keluarga aktif.']);
+                }
+            }
+            $anggotaKartuKeluarga->update($validated);
+        });
 
         return to_route('anggota-kartu-keluarga.show', $anggotaKartuKeluarga)->with('success', 'Anggota keluarga berhasil diperbarui.');
     }
