@@ -31,11 +31,12 @@ class PenugasanPerangkatService
         return DB::transaction(function () use ($old, $data, $actor) {
             $old = PenugasanPerangkat::query()->lockForUpdate()->findOrFail($old->id);
             if ($old->status !== 'aktif') throw ValidationException::withMessages(['penugasan' => 'Penugasan ini sudah tidak aktif.']);
+            $oldUser = PerangkatDesa::withTrashed()->find($old->perangkat_desa_id)?->user;
             $end = $data['tanggal_selesai_lama'];
             if ($data['tanggal_mulai'] <= $end) throw ValidationException::withMessages(['tanggal_mulai' => 'Tanggal mulai pejabat baru harus setelah tanggal selesai pejabat lama.']);
             $old->update(['status' => 'selesai', 'tanggal_selesai' => $end, 'nomor_sk_pemberhentian' => $data['nomor_sk_pemberhentian'] ?? null, 'tanggal_sk_pemberhentian' => $data['tanggal_sk_pemberhentian'] ?? null, 'catatan' => $data['catatan'] ?? $old->catatan]);
             $new = $this->create(['user_id' => $data['user_id'], 'jabatan_desa_id' => $old->jabatan_desa_id, 'desa_id' => $old->desa_id, 'dusun_id' => $old->dusun_id, 'tanggal_mulai' => $data['tanggal_mulai'], 'tanggal_selesai' => $data['tanggal_selesai'] ?? null, 'nomor_sk_pengangkatan' => $data['nomor_sk_pengangkatan'] ?? null, 'tanggal_sk_pengangkatan' => $data['tanggal_sk_pengangkatan'] ?? null, 'catatan' => $data['catatan'] ?? null], $actor);
-            $this->releaseUnusedRole($old->perangkatDesa->user, $old->jabatanDesa);
+            $this->releaseUnusedRole($oldUser, $old->jabatanDesa);
             return $new;
         });
     }
@@ -45,8 +46,9 @@ class PenugasanPerangkatService
         return DB::transaction(function () use ($assignment, $data) {
             $assignment = PenugasanPerangkat::query()->lockForUpdate()->findOrFail($assignment->id);
             if ($assignment->status !== 'aktif') throw ValidationException::withMessages(['penugasan' => 'Penugasan ini sudah tidak aktif.']);
+            $user = PerangkatDesa::withTrashed()->find($assignment->perangkat_desa_id)?->user;
             $assignment->update(array_merge($data, ['status' => 'selesai']));
-            $this->releaseUnusedRole($assignment->perangkatDesa->user, $assignment->jabatanDesa);
+            $this->releaseUnusedRole($user, $assignment->jabatanDesa);
             return $assignment;
         });
     }
@@ -74,8 +76,10 @@ class PenugasanPerangkatService
         foreach ($role as $candidate) if (\Spatie\Permission\Models\Role::where('name', $candidate)->exists()) { $user->assignRole($candidate); return; }
     }
 
-    private function releaseUnusedRole(User $user, JabatanDesa $jabatan): void
+    private function releaseUnusedRole(?User $user, JabatanDesa $jabatan): void
     {
+        if (!$user) return;
+
         if (!PenugasanPerangkat::aktif()->whereHas('perangkatDesa', fn ($q) => $q->where('user_id', $user->id))->whereHas('jabatanDesa', fn ($q) => $q->where('id', $jabatan->id))->exists()) {
             $role = ['JBD-0001' => 'kepala_desa', 'JBD-0002' => 'sekdes', 'JBD-0003' => 'kepala_dusun'][$jabatan->kode] ?? null;
             if ($role) {
