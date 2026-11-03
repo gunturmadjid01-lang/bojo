@@ -9,10 +9,12 @@ use App\Http\Controllers\Api\PopulationController;
 use App\Http\Controllers\Api\ResourceController;
 use App\Http\Controllers\Api\AccessController;
 use App\Http\Controllers\Api\PerangkatDesaController;
+use App\Http\Controllers\AndroidAppReleaseController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:api-login');
+    Route::get('/app/android-release', [AndroidAppReleaseController::class, 'latestApi'])->middleware('throttle:api-login');
     Route::middleware(['auth:sanctum', 'throttle:api', 'offline.idempotency'])->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);

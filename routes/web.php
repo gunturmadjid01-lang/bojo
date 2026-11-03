@@ -9,6 +9,13 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
+Route::get('/download/android', [\App\Http\Controllers\AndroidAppReleaseController::class, 'show'])->name('android.download');
+Route::get('/download/android/{release}/file', [\App\Http\Controllers\AndroidAppReleaseController::class, 'download'])->name('android.release.file');
+Route::middleware('auth')->prefix('settings/android-releases')->name('android-releases.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\AndroidAppReleaseController::class, 'index'])->name('index');
+    Route::post('/', [\App\Http\Controllers\AndroidAppReleaseController::class, 'store'])->name('store');
+});
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/login', [\App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'store']);

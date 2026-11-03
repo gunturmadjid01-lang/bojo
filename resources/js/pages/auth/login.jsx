@@ -84,6 +84,9 @@ export default function Login() {
                                 <ArrowRight className="size-4" />
                             </button>
                         </form>
+                        <a href={route('android.download')} className="mt-5 flex h-11 w-full items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100">
+                            Unduh Aplikasi Android
+                        </a>
                         <p className="mt-8 text-center text-xs text-slate-400">Hubungi administrator desa jika Anda belum memiliki akun.</p>
                     </div>
                 </section>
