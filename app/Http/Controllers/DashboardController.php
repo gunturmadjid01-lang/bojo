@@ -38,7 +38,7 @@ class DashboardController extends Controller
             'pendidikan' => $p->pendidikan?->nama, 'dusun' => $p->dusun?->nama,
             'statusTinggal' => $p->status_penduduk,
         ]) : collect();
-        $moduleStatistics = collect($modules)->filter(fn ($title, $module) => \App\Support\ModulePermissions::allows($request->user(), $module, 'view'))->mapWithKeys(fn ($title, $module) => [$module => ['title' => $title, 'statistics' => $service->for($module, $request->user(), $year)]])->all();
+        $moduleStatistics = collect($modules)->mapWithKeys(fn ($title, $module) => [$module => ['title' => $title, 'statistics' => $service->forDashboard($module, $request->user(), $year)]])->all();
         return \Inertia\Inertia::render('dashboard', [
             'residents' => $residents,
             'jumlahPenduduk' => $canViewResidents ? \App\Models\Penduduk::count() : 0,

@@ -34,6 +34,13 @@ class StatistikKependudukanService
         });
     }
 
+    public function forDashboard(string $module, User $user, ?int $year = null): array
+    {
+        return app(WilayahAccess::class)->forDashboardStatistics(
+            fn () => $this->for($module, $user, $year),
+        );
+    }
+
     public function years(): array
     {
         return [now()->year, now()->year - 1];
@@ -328,7 +335,9 @@ class StatistikKependudukanService
 
     private function pendudukPerDusun(): array
     {
-        $dusuns = Dusun::query()->where('aktif', true)->orderBy('nama')->get(['id', 'nama']);
+        $query = Dusun::query();
+        if (!app(WilayahAccess::class)->showingDashboardStatistics()) $query->where('aktif', true);
+        $dusuns = $query->orderBy('nama')->get(['id', 'nama']);
         if ($dusuns->isEmpty()) return [];
         $rows = Penduduk::query()->where('status_penduduk', 'aktif')->where('masih_hidup', true)
             ->whereIn('dusun_id', $dusuns->pluck('id'))->selectRaw('dusun_id, COUNT(*) AS value')->groupBy('dusun_id')->pluck('value', 'dusun_id');
@@ -585,7 +594,10 @@ class StatistikKependudukanService
 
     private function allRegions(): array
     {
-        return Dusun::query()->where('aktif', true)->orderBy('nama')->get(['id', 'nama'])
+        $regions = Dusun::query();
+        if (!app(WilayahAccess::class)->showingDashboardStatistics()) $regions->where('aktif', true);
+
+        return $regions->orderBy('nama')->get(['id', 'nama'])
             ->map(fn ($item) => ['id' => $item->id, 'label' => $item->nama, 'level' => 'dusun'])
             ->all();
     }

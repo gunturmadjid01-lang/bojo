@@ -14,6 +14,7 @@ class WilayahAccess
     private ?User $actor = null;
     private bool $explicitActor = false;
     private bool $system = false;
+    private bool $dashboardStatistics = false;
 
     // Explicit maintenance/seeding context. Never use this for user requests or exports.
     public function forSystem(Closure $callback): mixed
@@ -22,6 +23,16 @@ class WilayahAccess
         $this->system = true;
         try { return $callback(); }
         finally { $this->system = $previous; }
+    }
+
+    // Dashboard aggregates are intentionally village-wide for every role.
+    // Keep this override scoped to the statistics calculation only.
+    public function forDashboardStatistics(Closure $callback): mixed
+    {
+        $previous = $this->dashboardStatistics;
+        $this->dashboardStatistics = true;
+        try { return $callback(); }
+        finally { $this->dashboardStatistics = $previous; }
     }
 
     // Jobs must wrap their entire operation in forUser(), including queries.
@@ -38,7 +49,12 @@ class WilayahAccess
 
     public function unrestricted(): bool
     {
-        return $this->system || ($this->user()?->isSuperAdmin() ?? false);
+        return $this->system || $this->dashboardStatistics || ($this->user()?->isSuperAdmin() ?? false);
+    }
+
+    public function showingDashboardStatistics(): bool
+    {
+        return $this->dashboardStatistics;
     }
 
     public function assignments()

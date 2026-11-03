@@ -15,8 +15,8 @@ class DashboardController extends Controller
         $year = $request->integer('year', now()->year);
         $year = in_array($year, $years, true) ? $year : now()->year;
         $modules = ['kartu-keluarga', 'penduduk', 'kelahiran', 'kematian', 'penduduk-datang', 'penduduk-pindah'];
-        $payload = collect($modules)->filter(fn($module) => \App\Support\ModulePermissions::allows($request->user(), $module, 'view'))
-            ->mapWithKeys(fn($module) => [$module => $statistics->for($module, $request->user(), $year)])->all();
+        $payload = collect($modules)
+            ->mapWithKeys(fn($module) => [$module => $statistics->forDashboard($module, $request->user(), $year)])->all();
         return response()->json(['year' => $year, 'years' => $years, 'modules' => $payload]);
     }
 }
