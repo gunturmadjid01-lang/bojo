@@ -1,6 +1,7 @@
 import VillageDashboardLayout from '@/layouts/village-dashboard-layout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { ArrowDownToLine, Upload } from 'lucide-react';
+import { AlertCircle, ArrowDownToLine, Upload } from 'lucide-react';
+import { useState } from 'react';
 
 function formatBytes(bytes) {
     if (!bytes) return '—';
@@ -8,10 +9,18 @@ function formatBytes(bytes) {
 }
 
 export default function AndroidReleasesIndex({ releases = [], downloadUrl }) {
+    const [submitError, setSubmitError] = useState('');
     const { data, setData, post, processing, progress, errors, reset } = useForm({ version: '', version_code: '', release_notes: '', apk: null });
+    const errorMessages = [...Object.values(errors || {}).flatMap((error) => Array.isArray(error) ? error : [error]).filter(Boolean), ...(submitError ? [submitError] : [])];
     const submit = (event) => {
         event.preventDefault();
-        post(route('android-releases.store'), { forceFormData: true, onSuccess: () => reset() });
+        setSubmitError('');
+        post(route('android-releases.store'), {
+            forceFormData: true,
+            onSuccess: () => reset(),
+            onHttpException: (response) => setSubmitError(`Server menolak unggahan (HTTP ${response.status}). Periksa batas ukuran unggahan APK di hosting.`),
+            onNetworkError: () => setSubmitError('Koneksi terputus saat mengunggah APK. Periksa koneksi dan coba lagi.'),
+        });
     };
 
     return (
@@ -26,6 +35,7 @@ export default function AndroidReleasesIndex({ releases = [], downloadUrl }) {
                 <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
                     <h2 className="text-lg font-semibold">Publikasikan APK baru</h2>
                     <p className="mt-1 text-sm text-slate-500">Kode build harus selalu lebih besar dari rilis sebelumnya. Rilis lama tetap tersimpan dalam riwayat.</p>
+                    {errorMessages.length ? <div role="alert" aria-live="assertive" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"><div className="flex items-start gap-2"><AlertCircle className="mt-0.5 size-4 shrink-0" /><div><p className="font-semibold">Rilis belum berhasil dipublikasikan</p><ul className="mt-1 list-inside list-disc">{errorMessages.map((message, index) => <li key={`${index}-${message}`}>{message}</li>)}</ul></div></div></div> : null}
                     <form onSubmit={submit} className="mt-6 grid gap-5 sm:grid-cols-2">
                         <label className="block"><span className="mb-1.5 block text-sm font-medium">Versi aplikasi</span><input value={data.version} onChange={(event) => setData('version', event.target.value)} placeholder="1.1.0" className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-100" />{errors.version ? <span className="mt-1 block text-sm text-red-600">{errors.version}</span> : null}</label>
                         <label className="block"><span className="mb-1.5 block text-sm font-medium">Kode build Android</span><input type="number" min="1" value={data.version_code} onChange={(event) => setData('version_code', event.target.value)} placeholder="Contoh: 12" className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-100" />{errors.version_code ? <span className="mt-1 block text-sm text-red-600">{errors.version_code}</span> : null}</label>
