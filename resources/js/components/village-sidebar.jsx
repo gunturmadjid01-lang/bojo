@@ -10,6 +10,7 @@ import {
     MapPinned,
     Settings,
     ShieldCheck,
+    Smartphone,
     UserCog,
     UsersRound,
 } from 'lucide-react';
@@ -36,6 +37,7 @@ const kependudukanMenuItems = [
 const systemSettingsMenuItems = [
     { label: 'Manajemen User', href: '/users', icon: UserCog },
     { label: 'Matrix Permission', href: '/permissions', icon: ShieldCheck },
+    { label: 'Rilis Aplikasi Android', href: '/settings/android-releases', icon: Smartphone, superAdminOnly: true },
 ];
 
 const perangkatDesaMenuItems = [
@@ -55,7 +57,7 @@ export default function VillageSidebar({ open = true, onClose }) {
         return {
             master: masterMenuItems.filter((item) => canAccessHref(user, item.href, 'view')),
             kependudukan: kependudukanMenuItems.filter((item) => canAccessHref(user, item.href, 'view')),
-            system: systemSettingsMenuItems.filter((item) => canAccessHref(user, item.href, 'view')),
+            system: systemSettingsMenuItems.filter((item) => (!item.superAdminOnly || hasPermissionName(user, 'manage-android-releases')) && canAccessHref(user, item.href, 'view')),
             perangkat: perangkatDesaMenuItems.filter((item) => canAccessHref(user, item.href, 'view') || (item.permission && hasPermissionName(user, item.permission))),
             reports: canAccessHref(user, '/laporan', 'view'),
         };
@@ -220,6 +222,7 @@ export default function VillageSidebar({ open = true, onClose }) {
                             )}
                         </div>}
                         {visibleMenu.reports && <Link href="/laporan" onClick={onClose} className={`flex h-[44px] items-center gap-3 rounded-md px-3 text-sm transition-colors ${isActive('/laporan') ? 'bg-[#08a8c8] text-white' : 'text-[#009ac1] hover:bg-cyan-50'}`}><Gauge className="size-4" aria-hidden="true" /><span>Laporan & Statistik</span></Link>}
+                        <Link href="/download/android" onClick={onClose} className={`flex h-[44px] items-center gap-3 rounded-md px-3 text-sm transition-colors ${isActive('/download/android') ? 'bg-[#08a8c8] text-white' : 'text-[#009ac1] hover:bg-cyan-50'}`}><Smartphone className="size-4" aria-hidden="true" /><span>Unduh Aplikasi Android</span></Link>
 
                         {visibleMenu.system.length > 0 && <div className="overflow-hidden rounded-md border border-slate-200 bg-slate-50">
                             <button

@@ -40,9 +40,18 @@ const agamaOptions = [
 
 export default function PendudukForm({ penduduk, dusuns = [], rws = [], rts = [], pendidikans = [], pekerjaans = [], kartuKeluargas = [] }) {
     const editing = Boolean(penduduk);
+    const initialPenduduk = penduduk ? {
+        ...penduduk,
+        tanggal_lahir: penduduk.tanggal_lahir ? String(penduduk.tanggal_lahir).slice(0, 10) : '',
+        pendidikan_id: penduduk.pendidikan_id == null ? '' : String(penduduk.pendidikan_id),
+        pekerjaan_id: penduduk.pekerjaan_id == null ? '' : String(penduduk.pekerjaan_id),
+        dusun_id: penduduk.dusun_id == null ? '' : String(penduduk.dusun_id),
+        rw_id: penduduk.rw_id == null ? '' : String(penduduk.rw_id),
+        rt_id: penduduk.rt_id == null ? '' : String(penduduk.rt_id),
+    } : null;
     const { data, setData, post, put, processing, errors } = useForm({
         ...defaultForm,
-        ...(penduduk || {}),
+        ...(initialPenduduk || {}),
         kartu_keluarga_id: '',
         nomor_kk: '',
         tanggal_diterbitkan: '',
