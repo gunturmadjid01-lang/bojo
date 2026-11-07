@@ -19,7 +19,6 @@ class StatistikKependudukanService
         return app(WilayahAccess::class)->forUser($user, function () use ($module, $year, $includeRecaps): array {
             return match ($module) {
                 'kartu-keluarga' => $this->kartuKeluarga($year),
-
                 'penduduk' => $this->penduduk($year, $includeRecaps),
                 'kelahiran' => $this->kelahiran($year, $includeRecaps),
                 'kematian' => $this->kematian($year, $includeRecaps),
